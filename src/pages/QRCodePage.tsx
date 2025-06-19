@@ -6,12 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { QrCode, Download, Copy, ExternalLink } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import type { Tables } from '@/integrations/supabase/types';
 
-interface MusterSheet {
-  id: string;
-  title: string;
-  description: string;
-}
+type MusterSheet = Pick<Tables<'muster_sheets'>, 'id' | 'title' | 'description'>;
 
 export const QRCodePage = () => {
   const { sheetId } = useParams();
@@ -32,7 +29,7 @@ export const QRCodePage = () => {
     
     try {
       const { data, error } = await supabase
-        .from('muster_sheets' as any)
+        .from('muster_sheets')
         .select('id, title, description')
         .eq('id', sheetId)
         .single();

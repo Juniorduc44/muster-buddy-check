@@ -9,22 +9,13 @@ import {
   Clock, 
   QrCode, 
   ExternalLink, 
-  Settings,
   Calendar,
   Copy,
   BarChart3
 } from 'lucide-react';
+import type { Tables } from '@/integrations/supabase/types';
 
-interface MusterSheet {
-  id: string;
-  title: string;
-  description: string;
-  is_active: boolean;
-  created_at: string;
-  expires_at: string | null;
-  time_format: string;
-  required_fields: string[];
-}
+type MusterSheet = Tables<'muster_sheets'>;
 
 interface MusterSheetCardProps {
   sheet: MusterSheet;

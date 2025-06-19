@@ -9,16 +9,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { CheckCircle, Clock, AlertCircle } from 'lucide-react';
+import type { Tables } from '@/integrations/supabase/types';
 
-interface MusterSheet {
-  id: string;
-  title: string;
-  description: string;
-  is_active: boolean;
-  expires_at: string | null;
-  time_format: string;
-  required_fields: string[];
-}
+type MusterSheet = Tables<'muster_sheets'>;
 
 interface FormData {
   [key: string]: string | number;
@@ -53,7 +46,7 @@ export const AttendancePage = () => {
     
     try {
       const { data, error } = await supabase
-        .from('muster_sheets' as any)
+        .from('muster_sheets')
         .select('*')
         .eq('id', sheetId)
         .single();
@@ -95,7 +88,7 @@ export const AttendancePage = () => {
       };
 
       const { error } = await supabase
-        .from('attendance_records' as any)
+        .from('attendance_records')
         .insert([attendanceData]);
 
       if (error) {

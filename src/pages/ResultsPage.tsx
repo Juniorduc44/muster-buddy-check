@@ -4,7 +4,6 @@ import { useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { 
   Table, 
@@ -18,32 +17,12 @@ import {
   Users, 
   Download, 
   Calendar, 
-  Clock,
   AlertCircle 
 } from 'lucide-react';
+import type { Tables } from '@/integrations/supabase/types';
 
-interface MusterSheet {
-  id: string;
-  title: string;
-  description: string;
-  creator_id: string;
-  required_fields: string[];
-  time_format: string;
-  created_at: string;
-}
-
-interface AttendanceRecord {
-  id: string;
-  first_name: string;
-  last_name: string;
-  email?: string;
-  phone?: string;
-  rank?: string;
-  unit?: string;
-  badge_number?: string;
-  age?: number;
-  timestamp: string;
-}
+type MusterSheet = Tables<'muster_sheets'>;
+type AttendanceRecord = Tables<'attendance_records'>;
 
 export const ResultsPage = () => {
   const { sheetId } = useParams();
@@ -66,7 +45,7 @@ export const ResultsPage = () => {
     try {
       // Fetch sheet details
       const { data: sheetData, error: sheetError } = await supabase
-        .from('muster_sheets' as any)
+        .from('muster_sheets')
         .select('*')
         .eq('id', sheetId)
         .single();
@@ -88,7 +67,7 @@ export const ResultsPage = () => {
 
       // Fetch attendance records
       const { data: recordsData, error: recordsError } = await supabase
-        .from('attendance_records' as any)
+        .from('attendance_records')
         .select('*')
         .eq('sheet_id', sheetId)
         .order('timestamp', { ascending: true });
@@ -106,7 +85,6 @@ export const ResultsPage = () => {
 
   const formatDateTime = (dateString: string) => {
     const date = new Date(dateString);
-    const timeFormat = sheet?.time_format === 'military' ? 'HH:mm' : 'h:mm a';
     
     return {
       date: date.toLocaleDateString('en-US', {

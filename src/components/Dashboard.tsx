@@ -7,17 +7,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Plus, Users, Clock, QrCode } from 'lucide-react';
 import { CreateSheetModal } from './CreateSheetModal';
 import { MusterSheetCard } from './MusterSheetCard';
+import type { Tables } from '@/integrations/supabase/types';
 
-interface MusterSheet {
-  id: string;
-  title: string;
-  description: string;
-  is_active: boolean;
-  created_at: string;
-  expires_at: string | null;
-  time_format: string;
-  required_fields: string[];
-}
+type MusterSheet = Tables<'muster_sheets'>;
 
 export const Dashboard = () => {
   const { user } = useAuth();
@@ -34,7 +26,7 @@ export const Dashboard = () => {
     
     try {
       const { data, error } = await supabase
-        .from('muster_sheets' as any)
+        .from('muster_sheets')
         .select('*')
         .eq('creator_id', user.id)
         .order('created_at', { ascending: false });
