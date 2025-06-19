@@ -7,6 +7,9 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
+import { AttendancePage } from "./pages/AttendancePage";
+import { ResultsPage } from "./pages/ResultsPage";
+import { QRCodePage } from "./pages/QRCodePage";
 
 const queryClient = new QueryClient();
 
@@ -19,6 +22,9 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />
+            <Route path="/attend/:sheetId" element={<AttendancePage />} />
+            <Route path="/results/:sheetId" element={<ResultsPage />} />
+            <Route path="/qr/:sheetId" element={<QRCodePage />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

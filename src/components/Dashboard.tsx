@@ -32,16 +32,20 @@ export const Dashboard = () => {
   const fetchSheets = async () => {
     if (!user) return;
     
-    const { data, error } = await supabase
-      .from('muster_sheets')
-      .select('*')
-      .eq('creator_id', user.id)
-      .order('created_at', { ascending: false });
+    try {
+      const { data, error } = await supabase
+        .from('muster_sheets' as any)
+        .select('*')
+        .eq('creator_id', user.id)
+        .order('created_at', { ascending: false });
 
-    if (error) {
-      console.error('Error fetching sheets:', error);
-    } else {
-      setSheets(data || []);
+      if (error) {
+        console.error('Error fetching sheets:', error);
+      } else {
+        setSheets(data || []);
+      }
+    } catch (error) {
+      console.error('Error in fetchSheets:', error);
     }
     setLoading(false);
   };
@@ -65,8 +69,8 @@ export const Dashboard = () => {
         <div className="mb-8">
           <div className="flex justify-between items-center mb-6">
             <div>
-              <h2 className="text-3xl font-bold text-white mb-2">Your Muster Sheets</h2>
-              <p className="text-gray-400">Create and manage attendance logs</p>
+              <h2 className="text-3xl font-bold text-white mb-2">Your Attendance Sheets</h2>
+              <p className="text-gray-400">Create and manage attendance for any event or meeting</p>
             </div>
             <Button
               onClick={() => setShowCreateModal(true)}
@@ -124,8 +128,8 @@ export const Dashboard = () => {
           <Card className="bg-gray-800 border-gray-700">
             <CardContent className="p-12 text-center">
               <Users className="h-16 w-16 text-gray-600 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-white mb-2">No Muster Sheets Yet</h3>
-              <p className="text-gray-400 mb-6">Create your first attendance sheet to get started</p>
+              <h3 className="text-xl font-semibold text-white mb-2">No Attendance Sheets Yet</h3>
+              <p className="text-gray-400 mb-6">Create your first attendance sheet for any event or meeting</p>
               <Button
                 onClick={() => setShowCreateModal(true)}
                 className="bg-green-600 hover:bg-green-700"

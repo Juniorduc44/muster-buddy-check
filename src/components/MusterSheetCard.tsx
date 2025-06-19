@@ -3,6 +3,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/hooks/use-toast';
 import { 
   Users, 
   Clock, 
@@ -11,7 +12,7 @@ import {
   Settings,
   Calendar,
   Copy,
-  CheckCircle 
+  BarChart3
 } from 'lucide-react';
 
 interface MusterSheet {
@@ -31,11 +32,24 @@ interface MusterSheetCardProps {
 }
 
 export const MusterSheetCard = ({ sheet }: MusterSheetCardProps) => {
+  const { toast } = useToast();
   const attendanceUrl = `${window.location.origin}/attend/${sheet.id}`;
+  const resultsUrl = `${window.location.origin}/results/${sheet.id}`;
   
   const handleCopyLink = async () => {
-    await navigator.clipboard.writeText(attendanceUrl);
-    // TODO: Add toast notification
+    try {
+      await navigator.clipboard.writeText(attendanceUrl);
+      toast({
+        title: "Link copied!",
+        description: "Attendance link has been copied to clipboard",
+      });
+    } catch (error) {
+      toast({
+        title: "Failed to copy",
+        description: "Could not copy link to clipboard",
+        variant: "destructive",
+      });
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -118,6 +132,7 @@ export const MusterSheetCard = ({ sheet }: MusterSheetCardProps) => {
             size="sm"
             variant="outline"
             className="border-gray-600 text-gray-300 hover:bg-gray-700"
+            onClick={() => window.open(`/qr/${sheet.id}`, '_blank')}
           >
             <QrCode className="h-4 w-4" />
           </Button>
@@ -125,12 +140,13 @@ export const MusterSheetCard = ({ sheet }: MusterSheetCardProps) => {
             size="sm"
             variant="outline"
             className="border-gray-600 text-gray-300 hover:bg-gray-700"
+            onClick={() => window.open(resultsUrl, '_blank')}
           >
-            <Settings className="h-4 w-4" />
+            <BarChart3 className="h-4 w-4" />
           </Button>
         </div>
 
-        <div className="pt-2 border-t border-gray-700">
+        <div className="pt-2 border-t border-gray-700 space-y-2">
           <a
             href={attendanceUrl}
             target="_blank"
@@ -139,6 +155,15 @@ export const MusterSheetCard = ({ sheet }: MusterSheetCardProps) => {
           >
             <ExternalLink className="h-4 w-4 mr-2" />
             View Attendance Page
+          </a>
+          <a
+            href={resultsUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center text-sm text-blue-400 hover:text-blue-300"
+          >
+            <BarChart3 className="h-4 w-4 mr-2" />
+            View Results & Analytics
           </a>
         </div>
       </CardContent>
