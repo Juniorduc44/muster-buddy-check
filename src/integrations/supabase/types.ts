@@ -62,6 +62,39 @@ export type Database = {
           },
         ]
       }
+      leaderboard: {
+        Row: {
+          coins_collected: number | null
+          created_at: string | null
+          game_duration_seconds: number | null
+          id: number
+          obstacles_passed: number | null
+          player_name: string
+          score: number
+          updated_at: string | null
+        }
+        Insert: {
+          coins_collected?: number | null
+          created_at?: string | null
+          game_duration_seconds?: number | null
+          id?: number
+          obstacles_passed?: number | null
+          player_name: string
+          score: number
+          updated_at?: string | null
+        }
+        Update: {
+          coins_collected?: number | null
+          created_at?: string | null
+          game_duration_seconds?: number | null
+          id?: number
+          obstacles_passed?: number | null
+          player_name?: string
+          score?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       muster_sheets: {
         Row: {
           created_at: string
