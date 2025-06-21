@@ -98,10 +98,25 @@ CREATE POLICY "Attendees see only their entry"
     auth.uid() = user_id
   );
 
--- Optional: Add policies for UPDATE/DELETE on musterentries for creators
-CREATE POLICY "Creators can manage entries"
+-- Optional: Add policies for UPDATE and DELETE on musterentries for creators
+
+-- UPDATE rights for creators
+CREATE POLICY "Creators can update entries"
   ON public.musterentries
-  FOR UPDATE, DELETE
+  FOR UPDATE
+  TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.mustersheets
+      WHERE mustersheets.id = musterentries.sheet_id
+        AND mustersheets.creator_id = auth.uid()
+    )
+  );
+
+-- DELETE rights for creators
+CREATE POLICY "Creators can delete entries"
+  ON public.musterentries
+  FOR DELETE
   TO authenticated
   USING (
     EXISTS (
