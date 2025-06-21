@@ -16,6 +16,8 @@ export const QRCodePage = () => {
   const [sheet, setSheet] = useState<MusterSheet | null>(null);
   const [loading, setLoading] = useState(true);
   const [qrCodeUrl, setQrCodeUrl] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [errorTitle, setErrorTitle] = useState<string>('Sheet Not Found');
 
   const attendanceUrl = `${window.location.origin}/attend/${sheetId}`;
 
@@ -35,12 +37,38 @@ export const QRCodePage = () => {
         .single();
 
       if (error) {
-        console.error('Error fetching sheet:', error);
+        console.error('[QRCodePage] Error fetching sheet:', {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+        });
+
+        // Permission-related errors need a clearer explanation
+        if (
+          error.code === 'PGRST301' || // anon permission denied
+          error.code === '42501' ||
+          error.message.toLowerCase().includes('permission')
+        ) {
+          setErrorTitle('Access Restricted');
+          setError(
+            'This sheet is not publicly accessible. ' +
+              'Ensure the required RLS policies are applied so anyone can view it.',
+          );
+        } else {
+          setErrorTitle('Sheet Not Found');
+          setError(
+            'This sheet could not be found or is no longer available.',
+          );
+        }
       } else {
         setSheet(data);
       }
     } catch (error) {
       console.error('Error in fetchSheet:', error);
+      setErrorTitle('Network Error');
+      setError(
+        'Failed to reach the server. Please check your connection and try again.',
+      );
     }
     setLoading(false);
   };
@@ -80,6 +108,24 @@ export const QRCodePage = () => {
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
         <div className="text-white text-lg">Loading...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md bg-gray-800 border-gray-700">
+          <CardContent className="p-8 text-center">
+            <h2 className="text-xl font-bold text-white mb-4">{errorTitle}</h2>
+            <p className="text-gray-400 mb-6">{error}</p>
+            <p className="text-sm text-gray-500">
+              Tip: If you are the owner, run&nbsp;
+              <code className="bg-gray-700 px-1 rounded">npm run apply-rls</code>&nbsp;
+              (or execute the SQL) to make the sheet public.
+            </p>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -162,6 +208,11 @@ export const QRCodePage = () => {
                 <li>• Attendees can scan with their phone camera</li>
                 <li>• They'll be taken directly to the attendance form</li>
                 <li>• All responses are recorded in real-time</li>
+                <li className="pt-2 text-yellow-300">
+                  Note: The sheet must have public access enabled. If scanning shows
+                  “Sheet Not Found”, apply the RLS policies
+                  (<code className="bg-gray-600 px-1 rounded">npm run apply-rls</code>).
+                </li>
               </ul>
             </div>
           </CardContent>

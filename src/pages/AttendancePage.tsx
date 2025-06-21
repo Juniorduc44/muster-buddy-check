@@ -28,6 +28,7 @@ export const AttendancePage = () => {
   const [submitted, setSubmitted] = useState(false);
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
+  const [errorTitle, setErrorTitle] = useState<string>('Sheet Not Found');
 
   useEffect(() => {
     if (sheetId) {
@@ -47,15 +48,39 @@ export const AttendancePage = () => {
         .single();
 
       if (error) {
-        console.error('Error fetching sheet:', error);
-        setError('Sheet not found or no longer available');
+        // Debugging details
+        console.error(
+          '[AttendancePage] Error fetching sheet:',
+          { code: error.code, message: error.message, details: error.details },
+        );
+
+        // Map Supabase / PostgREST error codes to friendlier messages
+        if (
+          error.code === 'PGRST301' || // permission denied (anon)
+          error.code === '42501' ||
+          error.message.toLowerCase().includes('permission')
+        ) {
+          setErrorTitle('Access Restricted');
+          setError(
+            'This attendance sheet is currently restricted. ' +
+              'Please check with the event organizer that the sheet is public and active.',
+          );
+        } else {
+          setErrorTitle('Sheet Not Found');
+          setError(
+            'This attendance sheet could not be found or is no longer available.',
+          );
+        }
       } else {
         console.log('Sheet fetched successfully:', data);
         setSheet(data);
       }
     } catch (error) {
-      console.error('Error in fetchSheet:', error);
-      setError('Failed to load attendance sheet');
+      console.error('Error in fetchSheet (network?):', error);
+      setErrorTitle('Network Error');
+      setError(
+        'Failed to reach the server. Please check your internet connection and try again.',
+      );
     }
     setLoading(false);
   };
@@ -143,10 +168,10 @@ export const AttendancePage = () => {
           <CardContent className="p-8 text-center">
             <AlertCircle className="h-16 w-16 text-red-400 mx-auto mb-4" />
             <h2 className="text-xl font-bold text-white mb-2">
-              Sheet Not Found
+              {errorTitle}
             </h2>
             <p className="text-gray-400">
-              {error || 'This attendance sheet could not be found or is no longer available.'}
+              {error}
             </p>
           </CardContent>
         </Card>
