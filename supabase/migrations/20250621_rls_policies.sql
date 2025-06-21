@@ -4,8 +4,8 @@
 -- Enable Row Level Security on muster_sheets table
 ALTER TABLE public.muster_sheets ENABLE ROW LEVEL SECURITY;
 
--- Enable Row Level Security on attendance_records table
-ALTER TABLE public.attendance_records ENABLE ROW LEVEL SECURITY;
+-- Enable Row Level Security on muster_entries table
+ALTER TABLE public.muster_entries ENABLE ROW LEVEL SECURITY;
 
 -- POLICY 1: Allow public read access to active muster sheets (needed for attendance page)
 -- This allows anyone to view active, non-expired muster sheets without authentication
@@ -23,39 +23,34 @@ CREATE POLICY "Users can manage their own muster sheets"
   WITH CHECK (creator_id = auth.uid());
 
 -- POLICY 3: Allow public insert access to attendance records
--- This allows anyone to submit attendance records without authentication
-CREATE POLICY "Public can submit attendance records"
-  ON public.attendance_records
-  FOR INSERT
-  WITH CHECK (true);
+-- POLICY 3: Allow anonymous attendees to submit entries via QR code
+-- An INSERT is allowed only if the referenced sheet exists
+CREATE POLICY "Allow QR code sign-ins"
+  ON public.muster_entries
+  FOR INSERT TO anon
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.muster_sheets
+      WHERE id = sheet_id
+    )
+  );
 
--- POLICY 4: Allow creators to view attendance records for their sheets
--- This allows users to view attendance records for sheets they created
-CREATE POLICY "Creators can view attendance for their sheets"
-  ON public.attendance_records
+-- POLICY 4: Owners (sheet creators) can view all entries for their sheets
+CREATE POLICY "Owners can view entries"
+  ON public.muster_entries
   FOR SELECT
   USING (
-    sheet_id IN (
-      SELECT id FROM public.muster_sheets WHERE creator_id = auth.uid()
+    EXISTS (
+      SELECT 1 FROM public.muster_sheets
+      WHERE muster_sheets.id = muster_entries.sheet_id
+        AND muster_sheets.creator_id = auth.uid()
     )
   );
 
--- POLICY 5: Allow creators to manage attendance records for their sheets
--- This allows users to update or delete attendance records for sheets they created
-CREATE POLICY "Creators can manage attendance for their sheets"
-  ON public.attendance_records
-  FOR UPDATE
+-- POLICY 5: Authenticated attendees can view only their own entry
+CREATE POLICY "Attendees see only their entry"
+  ON public.muster_entries
+  FOR SELECT
   USING (
-    sheet_id IN (
-      SELECT id FROM public.muster_sheets WHERE creator_id = auth.uid()
-    )
-  );
-
-CREATE POLICY "Creators can delete attendance for their sheets"
-  ON public.attendance_records
-  FOR DELETE
-  USING (
-    sheet_id IN (
-      SELECT id FROM public.muster_sheets WHERE creator_id = auth.uid()
-    )
+    auth.uid() = user_id
   );
