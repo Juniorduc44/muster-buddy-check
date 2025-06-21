@@ -14,10 +14,11 @@ Muster Buddy Check is a lightweight attendance-tracking web application designed
 4. Environment variables  
 5. Running the RLS policy script  
 6. Development workflow  
-7. Using the QR-code attendance flow  
-8. Deployment  
-9. Change log (v1.1.0 → v2.0.0)  
-10. Editing options (Lovable, IDE, Codespaces)
+7. Local testing from other devices  
+8. Using the QR-code attendance flow  
+9. Deployment  
+10. Change log (v1.1.0 → v2.0.0)  
+11. Editing options (Lovable, IDE, Codespaces)
 
 ---
 
@@ -74,7 +75,40 @@ npm run dev
 
 Open the site, create a muster sheet, then visit `/qr/<sheetId>` to view the auto-generated QR code.
 
-## 7. Using the QR-code attendance flow
+## 7. Local testing from other devices
+
+Need to check the QR code or attendance link from a phone or tablet on your local network?  
+Follow these steps:
+
+1. **Expose the Vite dev server on your LAN**  
+   ```bash
+   # one-off
+   npm run dev -- --host
+   # or permanently add to package.json → "dev": "vite --host"
+   ```  
+   The `--host` flag tells Vite to listen on all interfaces (0.0.0.0) instead of `localhost`.
+
+2. **Find your computer’s local IP address**  
+   On macOS/Linux: `ifconfig | grep "inet "` → look for something like `192.168.x.x`.  
+   On Windows: `ipconfig` → “IPv4 Address”.
+
+3. **Open the site from another device**  
+   In a mobile browser type:  
+   ```
+   http://<YOUR_IP>:5173
+   ```  
+   (replace `<YOUR_IP>` with the IP from step 2, keep port **5173** unless you changed it).
+
+4. **Scan QR codes generated during development**  
+   The QR component will embed this IP in links, so phones on the same Wi-Fi can open the attendance page directly.
+
+5. **Firewall / VPN notes**  
+   • Ensure your OS firewall allows inbound connections on port 5173.  
+   • Some corporate or campus networks may block peer-to-peer traffic—you might need to use a tunnelling tool (e.g., [ngrok](https://ngrok.com/)).  
+
+Once deployed to a public host (Vercel, Netlify, Lovable, etc.) the QR code will automatically use the production URL, so this setup is only required for LAN testing.
+
+## 8. Using the QR-code attendance flow
 1. Log in (or continue as guest) and create a new muster sheet.  
 2. Go to **QR Code** from the sheet card or `/qr/<sheetId>`.  
 3. Download or print the QR code.  
@@ -83,7 +117,7 @@ Open the site, create a muster sheet, then visit `/qr/<sheetId>` to view the aut
 
 The attendance page is completely public—no Supabase account required by the attendee.
 
-## 8. Deployment
+## 9. Deployment
 
 ### Lovable ✨
 The easiest path: open [Lovable](https://lovable.dev/projects/066e7d8b-7097-4ef3-94ea-977294650014) → **Share** → **Publish**.  
@@ -97,7 +131,7 @@ Lovable handles build & hosting automatically.
 
 Remember: self-hosted CI/CD will **not** run the RLS script automatically—you must execute `npm run apply-rls` once, or run the SQL manually.
 
-## 9. Change log
+## 10. Change log
 
 ### v2.0.0 — 2025-06-21
 * Public attendance pages powered by new **Row Level Security** policies  
@@ -112,6 +146,7 @@ Remember: self-hosted CI/CD will **not** run the RLS script automatically—you 
 Previous minor patches included small UI tweaks, guest-mode login, and performance improvements.
 
 ## 10. How can I edit this code?
+<!-- section number bumped to 11 in ToC -->
 
 There are several ways of editing your application.
 

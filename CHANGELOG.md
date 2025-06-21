@@ -29,6 +29,8 @@ The project adheres to [Semantic Versioning](https://semver.org/).
 - **UI/UX improvements**
   - Rich iconography (Lucide) & color-coded badges.
   - Success screen after submission with timestamp confirmation.
+- **Authentication**
+  - Added **“Sign in with GitHub”** OAuth flow (Supabase provider) in the Auth form, allowing creators to log in using a GitHub account.
 
 ### 🔄 Changed
 - **Project version bump** to **2.0.0** in `package.json`.

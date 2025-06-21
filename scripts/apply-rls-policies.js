@@ -13,8 +13,8 @@
  * - SUPABASE_SERVICE_KEY: The service role key (not the anon key)
  */
 
-const { createClient } = require('@supabase/supabase-js');
-const dotenv = require('dotenv');
+import { createClient } from '@supabase/supabase-js';
+import dotenv from 'dotenv';
 
 // Load environment variables from .env file if present
 dotenv.config();

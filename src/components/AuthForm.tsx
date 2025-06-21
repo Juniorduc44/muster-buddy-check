@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Shield, Mail, Lock, Zap, Users } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { Github } from 'lucide-react';
 
 export const AuthForm = () => {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -17,7 +18,7 @@ export const AuthForm = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signUp, signIn, signInWithMagicLink, setGuestMode } = useAuth();
+  const { signUp, signIn, signInWithMagicLink, setGuestMode, /* optional */ signInWithOAuth } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,6 +42,38 @@ export const AuthForm = () => {
       setError(result.error.message);
     }
     setLoading(false);
+  };
+
+  const handleGithubSignIn = async () => {
+    try {
+      setLoading(true);
+      setError('');
+
+      let result:
+        | { error: { message: string } | null }
+        | { error: { message: string } | null | undefined } = { error: null };
+
+      // Prefer the hook’s helper if it exists; fall back to direct supabase call.
+      if (typeof signInWithOAuth === 'function') {
+        // @ts-ignore – signature depends on AuthContext implementation
+        result = await signInWithOAuth('github');
+      } else {
+        result = await supabase.auth.signInWithOAuth({
+          provider: 'github',
+          options: {
+            redirectTo: `${window.location.origin}/`,
+          },
+        });
+      }
+
+      if (result?.error) {
+        setError(result.error.message);
+      }
+    } catch (err) {
+      setError('Failed to sign in with GitHub');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleGoogleSignIn = async () => {
@@ -219,6 +252,16 @@ export const AuthForm = () => {
                   <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
                 </svg>
                 Continue with Google
+              </Button>
+
+              <Button
+                type="button"
+                onClick={handleGithubSignIn}
+                disabled={loading}
+                className="w-full bg-gray-800 hover:bg-gray-700 text-white font-semibold border border-gray-600"
+              >
+                <Github className="h-4 w-4 mr-2" />
+                Continue with GitHub
               </Button>
 
               <Button
