@@ -31,14 +31,26 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        console.log('Auth state change:', event, session?.user?.email);
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
+        
+        // Handle OAuth redirects
+        if (event === 'SIGNED_IN' && session) {
+          // If this is an OAuth sign-in, we might want to redirect
+          const urlParams = new URLSearchParams(window.location.search);
+          if (urlParams.get('code')) {
+            // Clean up URL after OAuth
+            window.history.replaceState({}, document.title, window.location.pathname);
+          }
+        }
       }
     );
 
     // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('Initial session check:', session?.user?.email);
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
