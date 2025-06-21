@@ -1,12 +1,19 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { AuthForm } from '@/components/AuthForm';
 import { Header } from '@/components/Header';
 import { Dashboard } from '@/components/Dashboard';
 
 const Index = () => {
-  const { user, loading } = useAuth();
+  const { user, loading, isGuest, convertGuestToUser } = useAuth();
+
+  useEffect(() => {
+    // If user just signed in and was previously a guest, convert their data
+    if (user && !isGuest && localStorage.getItem('guest_sheet_id')) {
+      convertGuestToUser(user.id);
+    }
+  }, [user, isGuest, convertGuestToUser]);
 
   if (loading) {
     return (
@@ -16,7 +23,7 @@ const Index = () => {
     );
   }
 
-  if (!user) {
+  if (!user && !isGuest) {
     return <AuthForm />;
   }
 

@@ -6,9 +6,13 @@ import { supabase } from '@/integrations/supabase/client';
 interface AuthContextType {
   user: User | null;
   session: Session | null;
+  isGuest: boolean;
   signUp: (email: string, password: string) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
+  signInWithMagicLink: (email: string) => Promise<{ error: any }>;
   signOut: () => Promise<{ error: any }>;
+  setGuestMode: () => void;
+  convertGuestToUser: (userId: string) => Promise<void>;
   loading: boolean;
 }
 
@@ -25,15 +29,25 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
+  const [isGuest, setIsGuest] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Check if user is in guest mode
+    const guestMode = localStorage.getItem('guest_mode');
+    if (guestMode === 'true') {
+      setIsGuest(true);
+      setLoading(false);
+      return;
+    }
+
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         console.log('Auth state change:', event, session?.user?.email);
         setSession(session);
         setUser(session?.user ?? null);
+        setIsGuest(false);
         setLoading(false);
         
         // Handle OAuth redirects
@@ -80,17 +94,63 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return { error };
   };
 
+  const signInWithMagicLink = async (email: string) => {
+    const redirectUrl = `${window.location.origin}/`;
+    
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        emailRedirectTo: redirectUrl
+      }
+    });
+    return { error };
+  };
+
   const signOut = async () => {
+    localStorage.removeItem('guest_mode');
+    localStorage.removeItem('guest_sheet_id');
+    setIsGuest(false);
     const { error } = await supabase.auth.signOut();
     return { error };
+  };
+
+  const setGuestMode = () => {
+    localStorage.setItem('guest_mode', 'true');
+    setIsGuest(true);
+    setLoading(false);
+  };
+
+  const convertGuestToUser = async (userId: string) => {
+    const guestSheetId = localStorage.getItem('guest_sheet_id');
+    if (guestSheetId) {
+      try {
+        // Update the guest sheet to belong to the new user
+        const { error } = await supabase
+          .from('muster_sheets')
+          .update({ creator_id: userId })
+          .eq('id', guestSheetId);
+        
+        if (!error) {
+          localStorage.removeItem('guest_sheet_id');
+          localStorage.removeItem('guest_mode');
+          setIsGuest(false);
+        }
+      } catch (error) {
+        console.error('Error converting guest sheet:', error);
+      }
+    }
   };
 
   const value = {
     user,
     session,
+    isGuest,
     signUp,
     signIn,
+    signInWithMagicLink,
     signOut,
+    setGuestMode,
+    convertGuestToUser,
     loading,
   };
 

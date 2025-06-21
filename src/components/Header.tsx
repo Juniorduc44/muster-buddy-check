@@ -2,13 +2,17 @@
 import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Shield, LogOut, ExternalLink, Heart } from 'lucide-react';
+import { Shield, LogOut, ExternalLink, Heart, User } from 'lucide-react';
 
 export const Header = () => {
-  const { user, signOut } = useAuth();
+  const { user, signOut, isGuest } = useAuth();
 
   const handleSignOut = async () => {
     await signOut();
+  };
+
+  const handleSignInClick = () => {
+    window.location.href = '/';
   };
 
   return (
@@ -23,6 +27,17 @@ export const Header = () => {
         </div>
 
         <div className="flex items-center space-x-4">
+          {/* Sign In Button - Top Left for Guests */}
+          {isGuest && (
+            <Button
+              onClick={handleSignInClick}
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
+              <User className="h-4 w-4 mr-2" />
+              Sign In / Sign Up
+            </Button>
+          )}
+
           {/* Donation Button */}
           <a
             href="https://pay.zaprite.com/pl_iT3k7W4JRo"
@@ -45,7 +60,7 @@ export const Header = () => {
             <span>Services</span>
           </a>
 
-          {user && (
+          {user && !isGuest && (
             <div className="flex items-center space-x-3">
               <span className="text-gray-300 text-sm">
                 {user.email}
@@ -58,6 +73,23 @@ export const Header = () => {
               >
                 <LogOut className="h-4 w-4 mr-2" />
                 Sign Out
+              </Button>
+            </div>
+          )}
+
+          {isGuest && (
+            <div className="flex items-center space-x-3">
+              <span className="text-pink-400 text-sm font-medium">
+                Guest Mode
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleSignOut}
+                className="border-pink-600 text-pink-400 hover:bg-pink-900/20"
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                Exit Guest
               </Button>
             </div>
           )}
