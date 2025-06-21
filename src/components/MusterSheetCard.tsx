@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 
-type MusterSheet = Tables<'muster_sheets'>;
+type MusterSheet = Tables<'mustersheets'>;
 
 interface MusterSheetCardProps {
   sheet: MusterSheet;

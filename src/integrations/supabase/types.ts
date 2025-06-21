@@ -9,7 +9,7 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      attendance_records: {
+      musterentries: {
         Row: {
           age: number | null
           badge_number: string | null
@@ -57,7 +57,7 @@ export type Database = {
             foreignKeyName: "attendance_records_sheet_id_fkey"
             columns: ["sheet_id"]
             isOneToOne: false
-            referencedRelation: "muster_sheets"
+            referencedRelation: "mustersheets"
             referencedColumns: ["id"]
           },
         ]
@@ -95,7 +95,7 @@ export type Database = {
         }
         Relationships: []
       }
-      muster_sheets: {
+      mustersheets: {
         Row: {
           created_at: string
           creator_id: string

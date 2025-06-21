@@ -41,48 +41,48 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 // SQL statements to apply RLS policies
 const rls_policies = [
   // Enable RLS on tables
-  `ALTER TABLE public.muster_sheets ENABLE ROW LEVEL SECURITY;`,
-  `ALTER TABLE public.muster_entries ENABLE ROW LEVEL SECURITY;`,
+  `ALTER TABLE public.mustersheets ENABLE ROW LEVEL SECURITY;`,
+  `ALTER TABLE public.musterentries ENABLE ROW LEVEL SECURITY;`,
   
   // Policy 1: Allow public read access to active muster sheets
   `CREATE POLICY IF NOT EXISTS "Public can view active muster sheets"
-    ON public.muster_sheets
+    ON public.mustersheets
     FOR SELECT
     USING (is_active = true AND (expires_at IS NULL OR expires_at > now()));`,
   
   // Policy 2: Allow authenticated users to manage their own muster sheets
   `CREATE POLICY IF NOT EXISTS "Users can manage their own muster sheets"
-    ON public.muster_sheets
+    ON public.mustersheets
     FOR ALL
     USING (creator_id = auth.uid())
     WITH CHECK (creator_id = auth.uid());`,
   
   // Policy 3: Allow anonymous attendees to submit entries via QR code
   `CREATE POLICY IF NOT EXISTS "Allow QR code sign-ins"
-    ON public.muster_entries
+    ON public.musterentries
     FOR INSERT TO anon
     WITH CHECK (
       EXISTS (
-        SELECT 1 FROM public.muster_sheets
+        SELECT 1 FROM public.mustersheets
         WHERE id = sheet_id
       )
     );`,
   
   // Policy 4: Owners (sheet creators) can view all entries for their sheets
   `CREATE POLICY IF NOT EXISTS "Owners can view entries"
-    ON public.muster_entries
+    ON public.musterentries
     FOR SELECT
     USING (
       EXISTS (
-        SELECT 1 FROM public.muster_sheets
-        WHERE muster_sheets.id = muster_entries.sheet_id
-          AND muster_sheets.creator_id = auth.uid()
+        SELECT 1 FROM public.mustersheets
+        WHERE mustersheets.id = musterentries.sheet_id
+          AND mustersheets.creator_id = auth.uid()
       )
     );`,
   
   // Policy 5: Authenticated attendees can view only their own entry
   `CREATE POLICY IF NOT EXISTS "Attendees see only their entry"
-    ON public.muster_entries
+    ON public.musterentries
     FOR SELECT
     USING (auth.uid() = user_id);`
 ];
@@ -158,18 +158,18 @@ async function verifyRLSPolicies() {
     const { data: musterPolicies, error: musterError } = await supabase
       .from('pg_policies')
       .select('*')
-      .eq('tablename', 'muster_sheets');
+      .eq('tablename', 'mustersheets');
     
     const { data: attendancePolicies, error: attendanceError } = await supabase
       .from('pg_policies')
       .select('*')
-      .eq('tablename', 'muster_entries');
+      .eq('tablename', 'musterentries');
     
     if (musterError || attendanceError) {
       console.error('\x1b[31m%s\x1b[0m', '  ❌ Error verifying policies. You may need to check manually in the Supabase dashboard.');
     } else {
-      console.log('\x1b[32m%s\x1b[0m', `  ✅ Found ${musterPolicies?.length || 0} policies for muster_sheets`);
-      console.log('\x1b[32m%s\x1b[0m', `  ✅ Found ${attendancePolicies?.length || 0} policies for muster_entries`);
+      console.log('\x1b[32m%s\x1b[0m', `  ✅ Found ${musterPolicies?.length || 0} policies for mustersheets`);
+      console.log('\x1b[32m%s\x1b[0m', `  ✅ Found ${attendancePolicies?.length || 0} policies for musterentries`);
     }
   } catch (error) {
     console.error('\x1b[31m%s\x1b[0m', `  ❌ Error during verification: ${error.message}`);
