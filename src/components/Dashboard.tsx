@@ -206,7 +206,6 @@ export const Dashboard = () => {
                 key={sheet.id} 
                 sheet={sheet} 
                 onUpdate={fetchSheets}
-                isGuest={isGuest}
               />
             ))}
           </div>
@@ -216,7 +215,6 @@ export const Dashboard = () => {
           open={showCreateModal}
           onClose={() => setShowCreateModal(false)}
           onSheetCreated={handleSheetCreated}
-          isGuest={isGuest}
         />
       </div>
     </div>
