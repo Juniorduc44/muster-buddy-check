@@ -22,10 +22,12 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />
+            {/* Public attendance page - no auth required */}
             <Route path="/attend/:sheetId" element={<AttendancePage />} />
+            {/* Protected routes */}
             <Route path="/results/:sheetId" element={<ResultsPage />} />
             <Route path="/qr/:sheetId" element={<QRCodePage />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            {/* Catch-all 404 route */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

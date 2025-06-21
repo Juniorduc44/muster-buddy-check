@@ -27,6 +27,7 @@ export const AttendancePage = () => {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [formData, setFormData] = useState<Record<string, string>>({});
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (sheetId) {
@@ -38,6 +39,7 @@ export const AttendancePage = () => {
     if (!sheetId) return;
     
     try {
+      console.log('Fetching sheet with ID:', sheetId);
       const { data, error } = await supabase
         .from('muster_sheets')
         .select('*')
@@ -46,11 +48,14 @@ export const AttendancePage = () => {
 
       if (error) {
         console.error('Error fetching sheet:', error);
+        setError('Sheet not found or no longer available');
       } else {
+        console.log('Sheet fetched successfully:', data);
         setSheet(data);
       }
     } catch (error) {
       console.error('Error in fetchSheet:', error);
+      setError('Failed to load attendance sheet');
     }
     setLoading(false);
   };
@@ -73,6 +78,8 @@ export const AttendancePage = () => {
       const timeString = sheet.time_format === 'military' 
         ? now.toLocaleTimeString('en-US', { hour12: false })
         : now.toLocaleTimeString('en-US', { hour12: true });
+
+      console.log('Submitting attendance record:', formData);
 
       const recordData = {
         sheet_id: sheetId,
@@ -99,6 +106,7 @@ export const AttendancePage = () => {
           variant: "destructive",
         });
       } else {
+        console.log('Attendance submitted successfully');
         setSubmitted(true);
         toast({
           title: "Success!",
@@ -120,20 +128,34 @@ export const AttendancePage = () => {
     return field.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
 
-  const isExpired = sheet?.expires_at && new Date(sheet.expires_at) < new Date();
-  const isInactive = !sheet?.is_active;
-
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <div className="text-white">Loading...</div>
+        <div className="text-white">Loading attendance sheet...</div>
       </div>
     );
   }
 
-  if (!sheet) {
-    return <Navigate to="/404" replace />;
+  if (error || !sheet) {
+    return (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md bg-gray-800 border-gray-700">
+          <CardContent className="p-8 text-center">
+            <AlertCircle className="h-16 w-16 text-red-400 mx-auto mb-4" />
+            <h2 className="text-xl font-bold text-white mb-2">
+              Sheet Not Found
+            </h2>
+            <p className="text-gray-400">
+              {error || 'This attendance sheet could not be found or is no longer available.'}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
+
+  const isExpired = sheet.expires_at && new Date(sheet.expires_at) < new Date();
+  const isInactive = !sheet.is_active;
 
   if (isExpired || isInactive) {
     return (
