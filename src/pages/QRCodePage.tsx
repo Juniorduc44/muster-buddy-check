@@ -22,9 +22,17 @@ export const QRCodePage = () => {
   const attendanceUrl = `${window.location.origin}/attend/${sheetId}`;
 
   useEffect(() => {
+    // First, fetch the sheet metadata.
     fetchSheet();
-    generateQRCode();
   }, [sheetId]);
+
+  // Once the sheet is successfully loaded generate the QR code.
+  useEffect(() => {
+    if (sheet) {
+      generateQRCode();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sheet]);
 
   const fetchSheet = async () => {
     if (!sheetId) return;
