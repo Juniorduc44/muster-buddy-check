@@ -9,7 +9,7 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      attendance_records: {
+      musterentries: {
         Row: {
           age: number | null
           badge_number: string | null
@@ -57,7 +57,7 @@ export type Database = {
             foreignKeyName: "attendance_records_sheet_id_fkey"
             columns: ["sheet_id"]
             isOneToOne: false
-            referencedRelation: "muster_sheets"
+            referencedRelation: "mustersheets"
             referencedColumns: ["id"]
           },
         ]
@@ -94,101 +94,6 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
-      }
-      muster_sheets: {
-        Row: {
-          created_at: string
-          creator_id: string
-          description: string | null
-          expires_at: string | null
-          id: string
-          is_active: boolean
-          required_fields: string[]
-          time_format: string
-          title: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          creator_id: string
-          description?: string | null
-          expires_at?: string | null
-          id?: string
-          is_active?: boolean
-          required_fields?: string[]
-          time_format?: string
-          title: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          creator_id?: string
-          description?: string | null
-          expires_at?: string | null
-          id?: string
-          is_active?: boolean
-          required_fields?: string[]
-          time_format?: string
-          title?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      musterentries: {
-        Row: {
-          age: number | null
-          badge_number: string | null
-          created_at: string
-          email: string | null
-          first_name: string
-          id: string
-          last_name: string
-          phone: string | null
-          rank: string | null
-          sheet_id: string
-          timestamp: string
-          unit: string | null
-          user_id: string | null
-        }
-        Insert: {
-          age?: number | null
-          badge_number?: string | null
-          created_at?: string
-          email?: string | null
-          first_name: string
-          id?: string
-          last_name: string
-          phone?: string | null
-          rank?: string | null
-          sheet_id: string
-          timestamp?: string
-          unit?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          age?: number | null
-          badge_number?: string | null
-          created_at?: string
-          email?: string | null
-          first_name?: string
-          id?: string
-          last_name?: string
-          phone?: string | null
-          rank?: string | null
-          sheet_id?: string
-          timestamp?: string
-          unit?: string | null
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "musterentries_sheet_id_fkey"
-            columns: ["sheet_id"]
-            isOneToOne: false
-            referencedRelation: "mustersheets"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       mustersheets: {
         Row: {
