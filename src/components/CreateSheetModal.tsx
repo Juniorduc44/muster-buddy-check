@@ -132,7 +132,7 @@ export const CreateSheetModal = ({ open, onClose, onSheetCreated }: CreateSheetM
       };
 
       const { error } = await supabase
-        .from('muster_sheets' as any)
+        .from('mustersheets' as any)
         .insert([sheetData]);
 
       if (error) {
