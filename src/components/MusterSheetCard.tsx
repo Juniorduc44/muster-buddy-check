@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 
+// Correct table type to align with Supabase schema
 type MusterSheet = Tables<'mustersheets'>;
 
 interface MusterSheetCardProps {

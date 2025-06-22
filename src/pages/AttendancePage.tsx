@@ -17,7 +17,11 @@ import {
 } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 
-type MusterSheet = Tables<'mustersheets'>;
+// NOTE:
+// The table name is `mustersheets` (no underscore) and the attendance table is
+// `musterentries`. These names are consistent with the Supabase schema and RLS
+// policies.  Do not revert to the old `muster_sheets` / `attendance_records`
+// names, or the queries will fail.
 
 export const AttendancePage = () => {
   const { sheetId } = useParams<{ sheetId: string }>();
