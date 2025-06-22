@@ -50,6 +50,7 @@ ALTER TABLE public.musterentries ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Public can view active muster sheets"
   ON public.mustersheets
   FOR SELECT
+  TO authenticated, anon
   USING (is_active = true AND (expires_at IS NULL OR expires_at > now()));
 
 -- POLICY 2: Allow authenticated users to manage their own mustersheets
