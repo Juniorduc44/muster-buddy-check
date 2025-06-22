@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 
-type MusterSheet = Tables<'muster_sheets'>;
+type MusterSheet = Tables<'mustersheets'>;
 
 export const AttendancePage = () => {
   const { sheetId } = useParams<{ sheetId: string }>();
@@ -42,7 +42,7 @@ export const AttendancePage = () => {
     try {
       console.log('Fetching sheet with ID:', sheetId);
       const { data, error } = await supabase
-        .from('muster_sheets')
+        .from('mustersheets')
         .select('*')
         .eq('id', sheetId)
         .single();
@@ -120,7 +120,7 @@ export const AttendancePage = () => {
       };
 
       const { error } = await supabase
-        .from('attendance_records')
+        .from('musterentries')
         .insert([recordData]);
 
       if (error) {
