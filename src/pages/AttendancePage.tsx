@@ -48,7 +48,8 @@ export const AttendancePage = () => {
       const { data, error } = await supabase
         .from('mustersheets')
         .select('*')
-        .eq('id', sheetId)
+        // using match to avoid query-string formatting issues
+        .match({ id: sheetId })
         .single();
 
       if (error) {

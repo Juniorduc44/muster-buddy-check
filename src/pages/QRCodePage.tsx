@@ -38,10 +38,16 @@ export const QRCodePage = () => {
     if (!sheetId) return;
     
     try {
+      // Debug: show exact query params
+      console.log('[QRCodePage] fetching sheet', {
+        table: 'mustersheets',
+        match: { id: sheetId }
+      });
       const { data, error } = await supabase
         .from('mustersheets')
-        .select('id, title, description')
-        .eq('id', sheetId)
+        .select('id, title, description, is_active, expires_at')
+        // using match ensures exact equality without type confusion
+        .match({ id: sheetId })
         .single();
 
       if (error) {
@@ -68,8 +74,20 @@ export const QRCodePage = () => {
             'This sheet could not be found or is no longer available.',
           );
         }
-      } else {
-        setSheet(data);
+      } else if (data) {
+        // Additional validation: must be active & not expired
+        const expired =
+          data.expires_at && new Date(data.expires_at) < new Date();
+        if (!data.is_active || expired) {
+          setErrorTitle(expired ? 'Event Expired' : 'Event Inactive');
+          setError(
+            expired
+              ? 'This sheet has expired and is no longer accepting responses.'
+              : 'This sheet is currently inactive.',
+          );
+        } else {
+          setSheet(data);
+        }
       }
     } catch (error) {
       console.error('Error in fetchSheet:', error);
