@@ -33,13 +33,15 @@ This guide walks you through fixing these issues for *https://mustersheets.netli
      ```
      https://mustersheets.netlify.app/auth/v1/callback
      ```
-4. **Netlify Environment Variables**  
+4. **Supabase Dashboard → Auth → Settings → General → Site URL**  
+   - Must be **`https://mustersheets.netlify.app`** (no `localhost`, no trailing slash).
+5. **Netlify Environment Variables**  
    ```
    VITE_SUPABASE_URL       = https://<project>.supabase.co
    VITE_SUPABASE_ANON_KEY  = <anon key>
-   ```
+   ```  
    Redeploy if you changed any value.
-5. Clear browser cache **or** use Incognito, then retest.
+6. Clear browser cache **or** use Incognito, then retest.
 
 ---
 
@@ -78,6 +80,20 @@ This guide walks you through fixing these issues for *https://mustersheets.netli
    ```  
 3. **Update application**.
 
+### 3.5 Verify Supabase “Site URL” (Fixes *localhost:3000* Redirects)
+
+If Google login sends users to **`http://localhost:3000`** after deployment, your Supabase **Site URL** is still pointing to localhost.
+
+1. Supabase → **Auth** → **Settings** → **General**.  
+2. Locate **Site URL**.  
+3. Change it to your production domain **exactly**:  
+   ```
+   https://mustersheets.netlify.app
+   ```  
+   *No* trailing slash, *no* `http`, *no* `localhost`.  
+4. Click **Save**. Supabase now uses this domain when it cannot infer `redirect_to`.  
+5. Retest Google login. The redirect should now return to Netlify, not localhost.
+
 ---
 
 ## 4 Deploy & Test
@@ -85,9 +101,9 @@ This guide walks you through fixing these issues for *https://mustersheets.netli
 | Step | Expected Result |
 |------|-----------------|
 | 1. `git push` → Netlify build. | Build succeeds, environment vars present. |
-| 2. Open **Incognito** window → press *Continue with Google*. | Google prompt appears, then redirects back to `/`. User is **signed in** (Supabase session token in localStorage). |
+| 2. Open **Incognito** → press *Continue with Google*. | Google prompt appears, then redirects back to `/`. User is **signed in** (Supabase session token in localStorage). |
 | 3. Sign out → press *Continue with GitHub*. | GitHub authorises, redirects back, user signed in. |
-| 4. Check Supabase Dashboard → **Auth → Users**. | New user rows appear with identities `google` / `github`. |
+| 4. Supabase Dashboard → **Auth → Users**. | New user rows appear with identities `google` / `github`. |
 
 ---
 
@@ -95,7 +111,8 @@ This guide walks you through fixing these issues for *https://mustersheets.netli
 
 | Symptom | Fix |
 |---------|-----|
-| Google spins forever, network shows 302→302→302 | Redirect URL mismatch in Google Cloud *or* Supabase provider settings. |
+| Google spins forever, network shows 302 → 302 → 302 | Redirect URL mismatch in Google Cloud *or* Supabase provider settings. |
+| Google redirects to **localhost:3000** | **Site URL** in Supabase is still `http://localhost:3000`. Update to Netlify domain (see §3.5). |
 | GitHub `400 Bad Request` immediately | Callback URL missing in GitHub OAuth App. |
 | Works locally but not on Netlify | Forgot to add Netlify URL (including `https://`) in provider settings. |
 | GitHub works in dev but not prod | Using **different** Supabase projects/keys between environments; confirm `VITE_SUPABASE_URL` & `ANON_KEY`. |
@@ -118,4 +135,4 @@ This guide walks you through fixing these issues for *https://mustersheets.netli
 - Ensure your Supabase project is **not paused** (Billing → usage).  
 - Ask Supabase support with request ID from `x-request-id` response header.
 
-Happy authenticating!
+Happy authenticating!  
