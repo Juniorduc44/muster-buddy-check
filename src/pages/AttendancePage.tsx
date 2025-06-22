@@ -101,8 +101,47 @@ export const AttendancePage = () => {
     e.preventDefault();
     if (!sheet || !sheetId) return;
 
-    setSubmitting(true);
-    
+    setSubmitting(true); // prevent double-clicks
+
+    // Helper: map Supabase errors to UI-friendly text
+    const parseDbError = (dbErr: any): { title: string; message: string } => {
+      if (!dbErr) {
+        return {
+          title: 'Unknown Error',
+          message: 'Something went wrong. Please try again.',
+        };
+      }
+
+      // Common PostgREST / Supabase error codes we care about
+      switch (dbErr.code) {
+        case '23505': // unique_violation
+          return {
+            title: 'Already Checked-in',
+            message: 'An entry for this attendee already exists.',
+          };
+        case 'PGRST301': // permission denied (anon)
+        case '42501':
+          return {
+            title: 'Access Denied',
+            message:
+              'Public submissions are not allowed for this sheet. Please contact the event organizer.',
+          };
+        case '22P02': // invalid_text_representation (e.g., bad UUID)
+          return {
+            title: 'Invalid Link',
+            message:
+              'This attendance link is malformed or no longer valid.',
+          };
+        default:
+          return {
+            title: 'Submission Failed',
+            message:
+              dbErr.message ??
+              'Failed to submit attendance. Please try again.',
+          };
+      }
+    };
+
     try {
       const now = new Date();
       const timeString = sheet.time_format === 'military' 
@@ -129,10 +168,12 @@ export const AttendancePage = () => {
         .insert([recordData]);
 
       if (error) {
-        console.error('Error submitting attendance:', error);
+        console.error('[AttendancePage] Supabase insert error:', error);
+
+        const friendly = parseDbError(error);
         toast({
-          title: "Error",
-          description: "Failed to submit attendance. Please try again.",
+          title: friendly.title,
+          description: friendly.message,
           variant: "destructive",
         });
       } else {
@@ -143,15 +184,18 @@ export const AttendancePage = () => {
           description: `Thank you ${formData.first_name}! Your attendance has been recorded.`,
         });
       }
-    } catch (error) {
-      console.error('Error in handleSubmit:', error);
+    } catch (err: any) {
+      console.error('[AttendancePage] Unexpected error in handleSubmit:', err);
       toast({
         title: "Error",
-        description: "An unexpected error occurred. Please try again.",
+        description:
+          err?.message ??
+          'An unexpected network or server error occurred. Please try again.',
         variant: "destructive",
       });
+    } finally {
+      setSubmitting(false); // re-enable button
     }
-    setSubmitting(false);
   };
 
   const formatFieldLabel = (field: string) => {
