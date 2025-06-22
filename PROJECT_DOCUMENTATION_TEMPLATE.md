@@ -1,443 +1,124 @@
-
-# MusterSheets Application - Project Documentation Template
-## Version 1.0.0
-*Last Updated: December 2024*
+# Muster Buddy Check – Release v3.0.0  
+*Release date: **YYYY-MM-DD***  
 
 ---
 
-## 🎯 Project Overview
-
-### Purpose
-MusterSheets is a comprehensive web-based attendance tracking application designed for various types of events and gatherings. The application serves both military and civilian use cases, providing flexible attendance management with real-time tracking, QR code generation, and detailed analytics.
-
-### Core Functionality
-- **Multi-Event Support**: Templates for military formations, family reunions, class reunions, corporate meetings, and custom events
-- **Flexible Data Collection**: Customizable fields including names, contact info, ranks, units, badge numbers, and age
-- **Real-time Attendance**: Live attendance tracking with timestamp recording
-- **QR Code Integration**: Automatic QR code generation for easy check-ins
-- **Analytics & Export**: Comprehensive results dashboard with CSV export capabilities
-- **User Authentication**: Google OAuth and email/password authentication via Supabase
-
-### Target Users
-- Military personnel for formation musters and inspections
-- Event organizers for family reunions and social gatherings
-- Educational institutions for class reunions and alumni events
-- Corporate teams for meetings and conferences
-- General event coordinators for any type of gathering
+## 1  Version & Release Metadata
+| Item                | Value                                   |
+|---------------------|-----------------------------------------|
+| **Version**         | 3.0.0                                   |
+| **Previous Version**| 2.0.0                                   |
+| **Release Date**    | YYYY-MM-DD                              |
+| **Git Tag / SHA**   | `v3.0.0` / `<commit-sha>`               |
+| **Environment**     | Production & Staging                    |
+| **Migration Script**| `supabase/migrations/20250621_rls_policies.sql` |
 
 ---
 
-## 🏗️ Technical Architecture
-
-### Frontend Stack
-- **Framework**: React 18.3.1 with TypeScript
-- **Build Tool**: Vite
-- **Styling**: Tailwind CSS with shadcn/ui components
-- **Routing**: React Router DOM v6.26.2
-- **State Management**: React Context API with hooks
-- **Icons**: Lucide React
-- **Charts**: Recharts for analytics visualization
-
-### Backend Infrastructure
-- **Database**: Supabase PostgreSQL
-- **Authentication**: Supabase Auth with Google OAuth integration
-- **Real-time Features**: Supabase Realtime (ready for implementation)
-- **File Storage**: Not currently implemented but Supabase Storage available
-
-### Key Dependencies
-```json
-{
-  "@supabase/supabase-js": "^2.50.0",
-  "@tanstack/react-query": "^5.56.2",
-  "react": "^18.3.1",
-  "react-router-dom": "^6.26.2",
-  "tailwindcss": "latest",
-  "lucide-react": "^0.462.0",
-  "recharts": "^2.12.7"
-}
-```
+## 2  Executive Summary  
+v3.0.0 is a stability-focused release that makes QR-code attendance fully public, introduces GitHub single-sign-on, and eliminates the “Sheet Not Found” errors caused by table-name mismatches. It also converts Node scripts to ESM, adds comprehensive RLS policies, and updates documentation for seamless deployment on Lovable or local networks.
 
 ---
 
-## 📁 File Structure & Organization
+## 3  Detailed Change Log  
 
-### Root Directory Structure
-```
-├── src/
-│   ├── components/          # Reusable UI components
-│   ├── contexts/           # React Context providers
-│   ├── pages/              # Route-based page components
-│   ├── integrations/       # External service integrations
-│   ├── hooks/              # Custom React hooks
-│   ├── lib/                # Utility functions
-│   └── main.tsx           # Application entry point
-├── supabase/
-│   └── config.toml        # Supabase configuration
-└── public/                # Static assets
-```
-
-### Core Components Breakdown
-
-#### `/src/components/`
-- **Dashboard.tsx**: Main dashboard displaying user's attendance sheets with stats
-- **CreateSheetModal.tsx**: Modal for creating new attendance sheets with templates
-- **MusterSheetCard.tsx**: Individual sheet display card with actions
-- **AuthForm.tsx**: Authentication form with email/password and Google OAuth
-- **ui/**: shadcn/ui component library (buttons, cards, forms, etc.)
-
-#### `/src/pages/`
-- **Index.tsx**: Landing page with authentication check
-- **AttendancePage.tsx**: Public attendance submission form
-- **ResultsPage.tsx**: Analytics dashboard with attendance data and CSV export
-- **QRCodePage.tsx**: QR code display for easy sharing
-- **NotFound.tsx**: 404 error page
-
-#### `/src/contexts/`
-- **AuthContext.tsx**: Authentication state management with Supabase integration
-
-#### `/src/integrations/supabase/`
-- **client.ts**: Supabase client configuration
-- **types.ts**: Auto-generated TypeScript types from Supabase database
+| Area | Change | Impact |
+|------|--------|--------|
+| **QR Code Flow** | • Fixed race condition in `QRCodePage.tsx` so QR renders after sheet fetch.<br>• Updated `AttendancePage` error handling for clearer messages. | Attendees can reliably scan & submit without login. |
+| **Database Schema** | • Standardised table names to `mustersheets` & `musterentries` across code & SQL.<br>• Added index `idx_musterentries_sheet_id`. | Prevents 404s and improves query performance. |
+| **Row Level Security** | • New explicit policies (`TO authenticated, anon`).<br>• Public `SELECT` on active sheets, public `INSERT` on entries.<br>• Creator-only `SELECT / UPDATE / DELETE` on results. | Secure public sign-in while safeguarding results. |
+| **Auth Improvements** | • GitHub OAuth login in `AuthForm.tsx`.<br>• Guest mode refinements & session handling.<br>• Logout 403 resolved by correcting global scope request. | Smoother sign-in options; fewer auth errors. |
+| **Scripts & Tooling** | • `scripts/apply-rls-policies.js` refactored to ES Modules, loads `.env` via `dotenv`.<br>• Added `npm run apply-rls` convenience command.<br>• `.env.example` template committed. | Easy, repeatable database policy deployment. |
+| **Docs** | • New `MUSTER_BUDDY_QR_FIX.md` and `SUPABASE_SOP.md`.<br>• Expanded README with local-network QR testing, env setup, and GitHub SSO guide. | Faster onboarding & clearer troubleshooting. |
+| **UX Polish** | • Dashboard, Sheet Card, Results page use consistent badges & copy.<br>• Added CSV export button. | Better visual clarity and data export convenience. |
+| **Versioning** | Bumped **package.json** to `3.0.0`. | Aligns app & npm versions. |
 
 ---
 
-## 🗄️ Database Schema & Supabase Implementation
+## 4  Technical Changes
 
-### Database Tables
+### 4.1  Database
+* **Tables**: `mustersheets`, `musterentries` (no underscores).  
+* **Indexes**: `idx_musterentries_sheet_id` for faster look-ups.  
+* **RLS Policies**: see `supabase/migrations/20250621_rls_policies.sql` – 8 total policies.  
+* **Script Execution**: `npm run apply-rls` (requires `SUPABASE_SERVICE_KEY`).
 
-#### 1. `muster_sheets` Table
-**Purpose**: Stores attendance sheet configurations and metadata
+### 4.2  API / Front-end
+* Updated Supabase queries to match new table names.  
+* Added GitHub OAuth call:  
+  ```ts
+  supabase.auth.signInWithOAuth({ provider: 'github', options:{ redirectTo: window.location.origin }});
+  ```
+* All Node scripts converted to ESM (`import` syntax).
 
-| Column | Type | Description | Constraints |
-|--------|------|-------------|-------------|
-| `id` | uuid | Primary key | NOT NULL, DEFAULT gen_random_uuid() |
-| `creator_id` | uuid | User who created the sheet | NOT NULL, References auth.users |
-| `title` | text | Sheet title | NOT NULL |
-| `description` | text | Optional description | Nullable |
-| `required_fields` | text[] | Array of fields to collect | NOT NULL, DEFAULT ['first_name', 'last_name'] |
-| `time_format` | text | Time display format | NOT NULL, DEFAULT 'standard' |
-| `is_active` | boolean | Sheet active status | NOT NULL, DEFAULT true |
-| `expires_at` | timestamp | Optional expiration date | Nullable |
-| `created_at` | timestamp | Creation timestamp | NOT NULL, DEFAULT now() |
-| `updated_at` | timestamp | Last update timestamp | NOT NULL, DEFAULT now() |
-
-#### 2. `attendance_records` Table
-**Purpose**: Stores individual attendance submissions
-
-| Column | Type | Description | Constraints |
-|--------|------|-------------|-------------|
-| `id` | uuid | Primary key | NOT NULL, DEFAULT gen_random_uuid() |
-| `sheet_id` | uuid | Reference to muster sheet | NOT NULL, FOREIGN KEY |
-| `first_name` | text | Attendee first name | NOT NULL |
-| `last_name` | text | Attendee last name | NOT NULL |
-| `email` | text | Attendee email | Nullable |
-| `phone` | text | Attendee phone | Nullable |
-| `rank` | text | Military/position rank | Nullable |
-| `unit` | text | Unit/department | Nullable |
-| `badge_number` | text | Badge/ID number | Nullable |
-| `age` | integer | Attendee age | Nullable |
-| `timestamp` | timestamp | Check-in time | NOT NULL, DEFAULT now() |
-| `created_at` | timestamp | Record creation time | NOT NULL, DEFAULT now() |
-
-### Supabase Authentication Setup
-
-#### Authentication Providers
-- **Email/Password**: Native Supabase auth
-- **Google OAuth**: Configured with Google Cloud Console
-  - Client ID and Secret configured in Supabase dashboard
-  - Authorized domains and redirect URLs properly set
-
-#### Row Level Security (RLS)
-Currently **disabled** for public access to attendance submission. For enhanced security, implement:
-```sql
--- Enable RLS on muster_sheets
-ALTER TABLE muster_sheets ENABLE ROW LEVEL SECURITY;
-
--- Policy: Users can only see their own sheets
-CREATE POLICY "Users can view own sheets" ON muster_sheets
-  FOR SELECT USING (auth.uid() = creator_id);
-
--- Policy: Users can only create sheets for themselves
-CREATE POLICY "Users can create own sheets" ON muster_sheets
-  FOR INSERT WITH CHECK (auth.uid() = creator_id);
-```
-
-#### URL Configuration
-- **Site URL**: Set to production domain
-- **Redirect URLs**: Include both development and production URLs
-- **Email Templates**: Default Supabase templates (customizable)
+### 4.3  Dependencies
+* **@supabase/supabase-js** → ^2.50.0  
+* **dotenv** for local script env vars.  
+* Minor bumps: React 18.3.1, Vite 5.4.1 etc.
 
 ---
 
-## 🎨 User Interface & Experience
+## 5  Deployment / Upgrade Instructions
 
-### Design System
-- **Color Scheme**: Dark theme with gray-900 background
-- **Primary Colors**: Green accent (#10B981) for actions and success states
-- **Typography**: Default system fonts with various weights
-- **Layout**: Responsive grid system using Tailwind CSS
+1. **Pull latest main**  
+   ```bash
+   git checkout main && git pull
+   ```
 
-### Template System
-Pre-configured templates for different event types:
+2. **Install deps**  
+   ```bash
+   npm ci
+   ```
 
-1. **Military Formation**
-   - Fields: First Name, Last Name, Rank, Unit, Badge Number
-   - Time Format: 24-hour (military time)
-   - Use Case: Military musters, formations, inspections
+3. **Environment**  
+   * Copy `.env.example` → `.env`  
+   * Fill `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_KEY`.
 
-2. **Family Reunion**
-   - Fields: First Name, Last Name, Email, Phone, Age
-   - Time Format: 12-hour (standard)
-   - Use Case: Family gatherings, reunions
+4. **Apply DB migration** (one-time):  
+   ```bash
+   npm run apply-rls      # or run SQL in Supabase dashboard
+   ```
 
-3. **Class Reunion**
-   - Fields: First Name, Last Name, Email, Phone
-   - Time Format: 12-hour (standard)
-   - Use Case: School reunions, alumni events
+5. **Build & deploy**  
+   * **Local**: `npm run dev` then access `http://<LAN-IP>:3000`.  
+   * **Lovable**: push to `main`, auto-deploy triggers.
 
-4. **Corporate Meeting**
-   - Fields: First Name, Last Name, Email, Unit/Department
-   - Time Format: 12-hour (standard)
-   - Use Case: Business meetings, conferences
-
-5. **General Event**
-   - Fields: First Name, Last Name, Email
-   - Time Format: 12-hour (standard)
-   - Use Case: Any general gathering
-
-6. **Custom Template**
-   - Fields: User-selectable from available options
-   - Time Format: User-selectable
-   - Use Case: Unique requirements
-
-### Available Data Fields
-- `first_name` (Required)
-- `last_name` (Required)
-- `email`
-- `phone`
-- `rank`
-- `unit`
-- `badge_number`
-- `age`
+6. **Cache busting**  
+   * Confirm new environment variables on hosting platform.  
+   * Clear service-worker cache if QR images still stale.
 
 ---
 
-## 🔄 Application Flow
+## 6  Known Issues
 
-### 1. User Authentication
-```
-Landing Page → AuthForm → Dashboard
-```
-- Users can sign up/in with email/password or Google OAuth
-- Authentication state managed through React Context
-- Automatic redirection based on auth status
-
-### 2. Sheet Creation
-```
-Dashboard → Create Button → Template Selection → Form Configuration → Sheet Creation
-```
-- Users select from preset templates or create custom
-- Configure required fields, time format, expiration
-- Sheet becomes immediately active upon creation
-
-### 3. Attendance Submission
-```
-Public URL/QR Code → Attendance Form → Data Submission → Confirmation
-```
-- Public access (no authentication required)
-- Form fields dynamically generated based on sheet configuration
-- Real-time timestamp recording
-- Success confirmation with details
-
-### 4. Results & Analytics
-```
-Dashboard → Results Button → Analytics View → CSV Export
-```
-- Real-time attendance statistics
-- Visual charts and graphs
-- Sortable attendee list
-- One-click CSV export functionality
+| ID | Description | Workaround |
+|----|-------------|------------|
+| **#42** | Supabase `PGRST301` errors on very first cold start in anon mode. | Hard-refresh or retry after 2 s. |
+| **#45** | Large CSV exports (>1 MB) may freeze browser tab on mobile Safari. | Export from desktop. |
+| **#50** | Google OAuth occasionally conflicts with Guest mode localStorage. | Clear storage and re-login. |
 
 ---
 
-## 🔗 API Integration Points
+## 7  Contributors
 
-### Supabase Client Configuration
-```typescript
-const supabase = createClient<Database>(
-  "https://ypvoijfxlfxiyoekxgzx.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  {
-    auth: {
-      storage: localStorage,
-      persistSession: true,
-      autoRefreshToken: true,
-    }
-  }
-);
-```
+| GitHub Handle | Area |
+|---------------|------|
+| **@Juniorduc44** | Product owner, front-end |
+| **@Factory-AI** | Code automation & release engineering |
+| **@supabase** | Upstream library maintainers |
 
-### Key API Operations
-
-#### Authentication
-```typescript
-// Sign up
-await supabase.auth.signUp({
-  email,
-  password,
-  options: { emailRedirectTo: `${window.location.origin}/` }
-});
-
-// Sign in with Google
-await supabase.auth.signInWithOAuth({
-  provider: 'google',
-  options: { redirectTo: `${window.location.origin}/` }
-});
-```
-
-#### Data Operations
-```typescript
-// Create attendance sheet
-await supabase.from('muster_sheets').insert([sheetData]);
-
-// Submit attendance
-await supabase.from('attendance_records').insert([recordData]);
-
-// Fetch results
-await supabase
-  .from('attendance_records')
-  .select('*')
-  .eq('sheet_id', sheetId);
-```
+*(Add any additional contributors who helped on v3.0.0.)*
 
 ---
 
-## 🚀 Deployment & Configuration
+## 8  Future Roadmap
 
-### Environment Variables
-All configuration is handled through Supabase, no environment variables needed in the application code.
-
-### Build Configuration
-- **Vite Configuration**: Standard React + TypeScript setup
-- **Tailwind Config**: Extended with custom colors and animations
-- **TypeScript**: Strict mode enabled with path aliases
-
-### Supabase Project Configuration
-- **Project ID**: `ypvoijfxlfxiyoekxgzx`
-- **Region**: Auto-selected based on optimal performance
-- **Database**: PostgreSQL with automatic backups
-- **Auth**: Email and Google OAuth enabled
+* **Offline PWA mode** – cache QR & form for poor connectivity.  
+* **Custom QR styling** – brand logos & colors.  
+* **Email confirmations** – send attendee confirmation emails.  
+* **Role-based analytics** – separate instructor vs. TA permissions.  
+* **Mobile app wrapper** – native scanning & push notifications.  
 
 ---
 
-## 📈 Analytics & Reporting
-
-### Dashboard Statistics
-- Total sheets created
-- Active sheets count
-- QR code generation status
-- Real-time attendance counts
-
-### Results Page Features
-- Attendance timeline visualization
-- Participant demographics (when applicable)
-- Export capabilities (CSV format)
-- Search and filter functionality
-- Time-based attendance tracking
-
----
-
-## 🔒 Security Considerations
-
-### Current Security Model
-- **Public Attendance**: No authentication required for attendance submission
-- **Creator Authentication**: Required for sheet creation and management
-- **Data Validation**: Client-side and server-side validation
-- **HTTPS**: Enforced through Supabase and hosting platform
-
-### Future Security Enhancements
-- Row Level Security implementation
-- Rate limiting for submissions
-- Data encryption for sensitive information
-- Audit logging for administrative actions
-
----
-
-## 🛠️ Future Enhancement Opportunities
-
-### Version 1.1.0 Planned Features
-- [ ] Real-time attendance updates using Supabase Realtime
-- [ ] Email notifications for attendance milestones
-- [ ] Advanced analytics with time-series data
-- [ ] Mobile app companion
-- [ ] Bulk attendee import/export
-- [ ] Custom branding options
-
-### Version 1.2.0 Planned Features
-- [ ] Multi-language support
-- [ ] Advanced role-based permissions
-- [ ] Integration with calendar systems
-- [ ] Photo capture during check-in
-- [ ] Geolocation verification
-- [ ] SMS notifications
-
----
-
-## 📚 Development Guidelines
-
-### Code Standards
-- TypeScript strict mode
-- ESLint configuration for code quality
-- Consistent component structure
-- Proper error handling and loading states
-
-### Component Architecture
-- Functional components with hooks
-- Context for global state management
-- Custom hooks for reusable logic
-- Proper TypeScript typing throughout
-
-### Best Practices
-- Responsive design principles
-- Accessibility considerations
-- Performance optimization
-- SEO-friendly routing
-
----
-
-## 🐛 Known Issues & Limitations
-
-### Current Limitations
-- No offline capability
-- Limited to 50MB file storage (Supabase free tier)
-- No real-time collaboration features
-- Basic analytics visualization
-
-### Performance Considerations
-- Large attendance lists may impact load times
-- QR code generation is client-side only
-- CSV export limited by browser memory
-
----
-
-## 📞 Support & Maintenance
-
-### Monitoring
-- Supabase dashboard for database monitoring
-- Application error tracking through browser console
-- Performance monitoring through browser dev tools
-
-### Backup Strategy
-- Supabase automatic daily backups
-- Point-in-time recovery available
-- Manual export capabilities for critical data
-
----
-
-## 📄 License & Usage
-
-This project documentation template is designed for prompt engineering and development reference. The application is built using open-source technologies with appropriate licensing.
-
----
-
-*This documentation template should be updated with each major version release or significant feature addition. Next update scheduled for Version 1.1.0.*
+*End of Release v3.0.0 Template*  
