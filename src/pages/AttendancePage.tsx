@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
-import { useParams, Navigate } from 'react-router-dom';
+import { useParams, Navigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,9 +12,11 @@ import {
   Clock, 
   CheckCircle,
   AlertCircle,
-  Calendar
+  Calendar,
+  Bug,
 } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
+import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
 
 // NOTE:
 // The table name is `mustersheets` (no underscore) and the attendance table is
@@ -26,6 +27,7 @@ import type { Tables } from '@/integrations/supabase/types';
 export const AttendancePage = () => {
   const { sheetId } = useParams<{ sheetId: string }>();
   const { toast } = useToast();
+  const { user } = useAuth(); // Get user from AuthContext
   const [sheet, setSheet] = useState<MusterSheet | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -33,6 +35,7 @@ export const AttendancePage = () => {
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [errorTitle, setErrorTitle] = useState<string>('Sheet Not Found');
+  const isDevMode = import.meta.env.MODE === 'development'; // Check for development mode
 
   useEffect(() => {
     if (sheetId) {
@@ -44,7 +47,7 @@ export const AttendancePage = () => {
     if (!sheetId) return;
     
     try {
-      console.log('Fetching sheet with ID:', sheetId);
+      console.log('[AttendancePage] Fetching sheet with ID:', sheetId);
       const { data, error } = await supabase
         .from('mustersheets')
         .select('*')
@@ -77,11 +80,13 @@ export const AttendancePage = () => {
           );
         }
       } else {
-        console.log('Sheet fetched successfully:', data);
+        console.log('[AttendancePage] Sheet fetched successfully:', data);
+        console.log('[AttendancePage] Sheet active status:', data.is_active);
+        console.log('[AttendancePage] Sheet expiration:', data.expires_at);
         setSheet(data);
       }
     } catch (error) {
-      console.error('Error in fetchSheet (network?):', error);
+      console.error('[AttendancePage] Error in fetchSheet (network?):', error);
       setErrorTitle('Network Error');
       setError(
         'Failed to reach the server. Please check your internet connection and try again.',
@@ -148,7 +153,15 @@ export const AttendancePage = () => {
         ? now.toLocaleTimeString('en-US', { hour12: false })
         : now.toLocaleTimeString('en-US', { hour12: true });
 
-      console.log('Submitting attendance record:', formData);
+      console.log('[AttendancePage] Submitting attendance record:', {
+        sheetId: sheetId,
+        formData: formData,
+        sheetDetails: {
+          isActive: sheet.is_active,
+          expiresAt: sheet.expires_at,
+          currentTime: now.toISOString(),
+        },
+      });
 
       const recordData = {
         sheet_id: sheetId,
@@ -158,17 +171,19 @@ export const AttendancePage = () => {
         email: formData.email || null,
         phone: formData.phone || null,
         rank: formData.rank || null,
-        unit: formData.unit || null,
         badge_number: formData.badge_number || null,
+        unit: formData.unit || null,
         age: formData.age ? parseInt(formData.age) : null,
       };
 
-      const { error } = await supabase
+      const { error, data: insertData } = await supabase
         .from('musterentries')
-        .insert([recordData]);
+        .insert([recordData])
+        .select(); // Select to get the inserted data, useful for debugging
 
       if (error) {
         console.error('[AttendancePage] Supabase insert error:', error);
+        console.error('[AttendancePage] Full error object:', JSON.stringify(error, null, 2));
 
         const friendly = parseDbError(error);
         toast({
@@ -177,7 +192,7 @@ export const AttendancePage = () => {
           variant: "destructive",
         });
       } else {
-        console.log('Attendance submitted successfully');
+        console.log('[AttendancePage] Attendance submitted successfully:', insertData);
         setSubmitted(true);
         toast({
           title: "Success!",
@@ -202,6 +217,78 @@ export const AttendancePage = () => {
     return field.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
 
+  // Debugging function for RLS policies
+  const handleDebugRLS = async () => {
+    if (!sheetId) {
+      toast({
+        title: "Debug Error",
+        description: "No sheet ID available for RLS debug.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    console.log('[RLS Debug] Running RLS policy checks for sheet:', sheetId);
+    toast({
+      title: "RLS Debug",
+      description: "Checking RLS policies in console...",
+    });
+
+    // Test public SELECT policy for muster_sheets
+    try {
+      const { data, error } = await supabase
+        .from('mustersheets')
+        .select('id, title, is_active, expires_at')
+        .match({ id: sheetId })
+        .single();
+
+      if (error) {
+        console.error('[RLS Debug] Public SELECT on mustersheets failed:', error);
+        toast({
+          title: "RLS Debug: Public View Failed",
+          description: `Error: ${error.message}. Check 'Public can view active muster sheets' policy.`,
+          variant: "destructive",
+        });
+      } else {
+        console.log('[RLS Debug] Public SELECT on mustersheets successful:', data);
+        toast({
+          title: "RLS Debug: Public View OK",
+          description: "Public can view sheet metadata.",
+        });
+        if (!data.is_active) {
+          console.warn('[RLS Debug] Sheet is not active. Public view policy requires is_active = true.');
+          toast({
+            title: "RLS Debug: Sheet Inactive",
+            description: "Sheet is not active. Public view policy requires is_active = true.",
+            variant: "warning",
+          });
+        }
+        if (data.expires_at && new Date(data.expires_at) < new Date()) {
+          console.warn('[RLS Debug] Sheet is expired. Public view policy requires not expired.');
+          toast({
+            title: "RLS Debug: Sheet Expired",
+            description: "Sheet is expired. Public view policy requires not expired.",
+            variant: "warning",
+          });
+        }
+      }
+    } catch (err) {
+      console.error('[RLS Debug] Unexpected error during public SELECT test:', err);
+      toast({
+        title: "RLS Debug: Unexpected Error",
+        description: "An unexpected error occurred during public SELECT test.",
+        variant: "destructive",
+      });
+    }
+
+    // Test public INSERT policy for muster_entries (simulated)
+    // This is harder to test directly without actually inserting,
+    // but we can check the policy definition in Supabase.
+    console.log('[RLS Debug] To test INSERT policy, try submitting the form.');
+    console.log('[RLS Debug] Ensure "Allow QR code sign-ins" policy is active and conditions are met.');
+  };
+
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
@@ -222,6 +309,11 @@ export const AttendancePage = () => {
             <p className="text-gray-400">
               {error}
             </p>
+            {isDevMode && (
+              <Button onClick={handleDebugRLS} className="mt-4 bg-blue-600 hover:bg-blue-700">
+                <Bug className="h-4 w-4 mr-2" /> Debug RLS
+              </Button>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -246,6 +338,11 @@ export const AttendancePage = () => {
                 : 'This attendance sheet is currently inactive.'
               }
             </p>
+            {isDevMode && (
+              <Button onClick={handleDebugRLS} className="mt-4 bg-blue-600 hover:bg-blue-700">
+                <Bug className="h-4 w-4 mr-2" /> Debug RLS
+              </Button>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -335,6 +432,11 @@ export const AttendancePage = () => {
               <p className="text-sm text-gray-400">
                 Your attendance will be recorded with the current timestamp
               </p>
+              {isDevMode && (
+                <Button onClick={handleDebugRLS} className="mt-4 bg-blue-600 hover:bg-blue-700">
+                  <Bug className="h-4 w-4 mr-2" /> Debug RLS Policies
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>
