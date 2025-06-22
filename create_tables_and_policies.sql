@@ -63,7 +63,7 @@ CREATE POLICY "Users can manage their own muster sheets"
   WITH CHECK (creator_id = auth.uid());
 
 -- POLICY 3: Allow anonymous attendees to submit entries via QR code
--- An INSERT is allowed only if the referenced sheet exists
+-- An INSERT is allowed only if the referenced sheet exists, is active, and not expired
 CREATE POLICY "Allow QR code sign-ins"
   ON public.musterentries
   FOR INSERT 
@@ -72,8 +72,8 @@ CREATE POLICY "Allow QR code sign-ins"
     EXISTS (
       SELECT 1 FROM public.mustersheets
       WHERE id = sheet_id
-      AND (expires_at IS NULL OR expires_at > now())
       AND is_active = true
+      AND (expires_at IS NULL OR expires_at > now())
     )
   );
 
