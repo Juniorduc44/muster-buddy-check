@@ -10,7 +10,8 @@ import { CreateSheetModal } from './CreateSheetModal';
 import { MusterSheetCard } from './MusterSheetCard';
 import type { Tables } from '@/integrations/supabase/types';
 
-type MusterSheet = Tables<'muster_sheets'>;
+// Corrected table type to match database schema
+type MusterSheet = Tables<'mustersheets'>;
 
 export const Dashboard = () => {
   const { user, isGuest, convertGuestToUser } = useAuth();
@@ -29,7 +30,7 @@ export const Dashboard = () => {
       if (guestSheetId) {
         try {
           const { data, error } = await supabase
-            .from('muster_sheets')
+            .from('mustersheets')
             .select('*')
             .eq('id', guestSheetId)
             .single();
@@ -50,7 +51,7 @@ export const Dashboard = () => {
     } else if (user) {
       try {
         const { data, error } = await supabase
-          .from('muster_sheets')
+          .from('mustersheets')
           .select('*')
           .eq('creator_id', user.id)
           .order('created_at', { ascending: false });
