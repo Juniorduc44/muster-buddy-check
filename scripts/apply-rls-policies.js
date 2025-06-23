@@ -3,7 +3,7 @@
  * scripts/apply-rls-policies.js
  * 
  * This script applies Row Level Security (RLS) policies to the Supabase database
- * to make muster sheets and attendance records publicly accessible.
+ * by calling a PostgreSQL function `apply_rls_policies()`.
  * 
  * Usage:
  * node scripts/apply-rls-policies.js
@@ -38,142 +38,20 @@ if (!SUPABASE_SERVICE_KEY) {
 // Create Supabase client with admin privileges
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
-// SQL statements to apply RLS policies
-const rls_policies = [
-  // Enable RLS on tables
-  `ALTER TABLE public.mustersheets ENABLE ROW LEVEL SECURITY;`,
-  `ALTER TABLE public.musterentries ENABLE ROW LEVEL SECURITY;`,
-  
-  // Policy 1: Allow public read access to active muster sheets
-  `CREATE POLICY IF NOT EXISTS "Public can view active muster sheets"
-    ON public.mustersheets
-    FOR SELECT
-    USING (is_active = true AND (expires_at IS NULL OR expires_at > now()));`,
-  
-  // Policy 2: Allow authenticated users to manage their own muster sheets
-  `CREATE POLICY IF NOT EXISTS "Users can manage their own muster sheets"
-    ON public.mustersheets
-    FOR ALL
-    USING (creator_id = auth.uid())
-    WITH CHECK (creator_id = auth.uid());`,
-  
-  // Policy 3: Allow anonymous attendees to submit entries via QR code
-  `CREATE POLICY IF NOT EXISTS "Allow QR code sign-ins"
-    ON public.musterentries
-    FOR INSERT TO anon
-    WITH CHECK (
-      EXISTS (
-        SELECT 1 FROM public.mustersheets
-        WHERE id = sheet_id
-      )
-    );`,
-  
-  // Policy 4: Owners (sheet creators) can view all entries for their sheets
-  `CREATE POLICY IF NOT EXISTS "Owners can view entries"
-    ON public.musterentries
-    FOR SELECT
-    USING (
-      EXISTS (
-        SELECT 1 FROM public.mustersheets
-        WHERE mustersheets.id = musterentries.sheet_id
-          AND mustersheets.creator_id = auth.uid()
-      )
-    );`,
-  
-  // Policy 5: Authenticated attendees can view only their own entry
-  `CREATE POLICY IF NOT EXISTS "Attendees see only their entry"
-    ON public.musterentries
-    FOR SELECT
-    USING (auth.uid() = user_id);`
-];
-
 /**
- * Apply RLS policies to the database
+ * Apply RLS policies to the database by calling the PostgreSQL function.
  */
 async function applyRLSPolicies() {
-  console.log('\x1b[34m%s\x1b[0m', 'Applying Row Level Security (RLS) policies...');
+  console.log('\x1b[34m%s\x1b[0m', 'Calling apply_rls_policies() function...');
   
-  for (const [index, sql] of rls_policies.entries()) {
-    try {
-      console.log(`\n[${index + 1}/${rls_policies.length}] Executing SQL:`);
-      console.log('\x1b[90m%s\x1b[0m', sql);
-      
-      const { error } = await supabase.rpc('pgaudit.exec_sql', { sql });
-      
-      if (error) {
-        if (error.message.includes('already exists')) {
-          console.log('\x1b[33m%s\x1b[0m', '  ⚠️  Policy already exists, skipping...');
-        } else {
-          console.error('\x1b[31m%s\x1b[0m', `  ❌ Error: ${error.message}`);
-        }
-      } else {
-        console.log('\x1b[32m%s\x1b[0m', '  ✅ Success');
-      }
-    } catch (error) {
-      console.error('\x1b[31m%s\x1b[0m', `  ❌ Exception: ${error.message}`);
-      
-      // If the pgaudit.exec_sql function doesn't exist, try direct SQL execution
-      if (error.message.includes('function') && error.message.includes('does not exist')) {
-        try {
-          console.log('\x1b[90m%s\x1b[0m', '  Trying direct SQL execution...');
-          const { error: directError } = await supabase.rpc('exec_sql', { command: sql });
-          
-          if (directError) {
-            // Last resort: try raw REST API call
-            const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/exec_sql`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
-                'apikey': SUPABASE_SERVICE_KEY
-              },
-              body: JSON.stringify({ command: sql })
-            });
-            
-            if (!response.ok) {
-              const errorData = await response.json();
-              console.error('\x1b[31m%s\x1b[0m', `  ❌ REST API Error: ${JSON.stringify(errorData)}`);
-            } else {
-              console.log('\x1b[32m%s\x1b[0m', '  ✅ Success via REST API');
-            }
-          } else {
-            console.log('\x1b[32m%s\x1b[0m', '  ✅ Success via exec_sql');
-          }
-        } catch (finalError) {
-          console.error('\x1b[31m%s\x1b[0m', `  ❌ Final Error: ${finalError.message}`);
-          console.error('\x1b[31m%s\x1b[0m', '  You may need to execute these SQL commands manually in the Supabase SQL editor.');
-        }
-      }
-    }
-  }
-}
+  const { data, error } = await supabase.rpc('apply_rls_policies');
 
-/**
- * Verify RLS policies are correctly applied
- */
-async function verifyRLSPolicies() {
-  console.log('\n\x1b[34m%s\x1b[0m', 'Verifying RLS policies...');
-  
-  try {
-    const { data: musterPolicies, error: musterError } = await supabase
-      .from('pg_policies')
-      .select('*')
-      .eq('tablename', 'mustersheets');
-    
-    const { data: attendancePolicies, error: attendanceError } = await supabase
-      .from('pg_policies')
-      .select('*')
-      .eq('tablename', 'musterentries');
-    
-    if (musterError || attendanceError) {
-      console.error('\x1b[31m%s\x1b[0m', '  ❌ Error verifying policies. You may need to check manually in the Supabase dashboard.');
-    } else {
-      console.log('\x1b[32m%s\x1b[0m', `  ✅ Found ${musterPolicies?.length || 0} policies for mustersheets`);
-      console.log('\x1b[32m%s\x1b[0m', `  ✅ Found ${attendancePolicies?.length || 0} policies for musterentries`);
-    }
-  } catch (error) {
-    console.error('\x1b[31m%s\x1b[0m', `  ❌ Error during verification: ${error.message}`);
+  if (error) {
+    throw new Error(`apply_rls_policies failed: ${error.message}`);
   }
+  
+  console.log('\x1b[32m%s\x1b[0m', '✅ RLS function executed successfully');
+  console.log('\x1b[32m%s\x1b[0m', `Status: ${data.status}, Policies Applied: ${data.policies_applied}`);
 }
 
 // Execute the script
@@ -184,7 +62,6 @@ async function verifyRLSPolicies() {
   
   try {
     await applyRLSPolicies();
-    await verifyRLSPolicies();
     
     console.log('\n\x1b[32m%s\x1b[0m', '✅ RLS policies have been applied successfully!');
     console.log('\x1b[32m%s\x1b[0m', '✅ The attendance page should now be publicly accessible.');
