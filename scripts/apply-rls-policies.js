@@ -39,19 +39,123 @@ if (!SUPABASE_SERVICE_KEY) {
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
 /**
- * Apply RLS policies to the database by calling the PostgreSQL function.
+ * SQL statements that enable RLS and create policies.
+ * Each statement is idempotent via IF NOT EXISTS or existing-check logic.
+ */
+const RLS_SQL = [
+  // --- Enable RLS ------------------------------------------------------
+  `ALTER TABLE public.mustersheets ENABLE ROW LEVEL SECURITY;`,
+  `ALTER TABLE public.musterentries ENABLE ROW LEVEL SECURITY;`,
+
+  // --- mustersheets policies ------------------------------------------
+  `CREATE POLICY IF NOT EXISTS "Public can view active muster sheets"
+     ON public.mustersheets
+     FOR SELECT
+     TO anon, authenticated
+     USING (is_active = true AND (expires_at IS NULL OR expires_at > now()));`,
+
+  `CREATE POLICY IF NOT EXISTS "Users can manage their own muster sheets"
+     ON public.mustersheets
+     FOR ALL
+     TO authenticated
+     USING (creator_id = auth.uid())
+     WITH CHECK (creator_id = auth.uid());`,
+
+  // --- musterentries policies -----------------------------------------
+  `CREATE POLICY IF NOT EXISTS "Allow QR code sign-ins"
+     ON public.musterentries
+     FOR INSERT
+     TO anon, authenticated
+     WITH CHECK (
+       EXISTS (
+         SELECT 1 FROM public.mustersheets
+         WHERE id = sheet_id
+           AND is_active = true
+           AND (expires_at IS NULL OR expires_at > now())
+       )
+     );`,
+
+  `CREATE POLICY IF NOT EXISTS "Owners can view entries"
+     ON public.musterentries
+     FOR SELECT
+     TO authenticated
+     USING (
+       EXISTS (
+         SELECT 1 FROM public.mustersheets
+         WHERE mustersheets.id = musterentries.sheet_id
+           AND mustersheets.creator_id = auth.uid()
+       )
+     );`,
+
+  `CREATE POLICY IF NOT EXISTS "Attendees see only their entry"
+     ON public.musterentries
+     FOR SELECT
+     TO authenticated
+     USING (auth.uid() = user_id);`,
+
+  `CREATE POLICY IF NOT EXISTS "Creators can update entries"
+     ON public.musterentries
+     FOR UPDATE
+     TO authenticated
+     USING (
+       EXISTS (
+         SELECT 1 FROM public.mustersheets
+         WHERE mustersheets.id = musterentries.sheet_id
+           AND mustersheets.creator_id = auth.uid()
+       )
+     );`,
+
+  `CREATE POLICY IF NOT EXISTS "Creators can delete entries"
+     ON public.musterentries
+     FOR DELETE
+     TO authenticated
+     USING (
+       EXISTS (
+         SELECT 1 FROM public.mustersheets
+         WHERE mustersheets.id = musterentries.sheet_id
+           AND mustersheets.creator_id = auth.uid()
+       )
+     );`,
+
+  `CREATE POLICY IF NOT EXISTS "Public can view entries for active sheets"
+     ON public.musterentries
+     FOR SELECT
+     TO anon
+     USING (
+       EXISTS (
+         SELECT 1 FROM public.mustersheets
+         WHERE mustersheets.id = musterentries.sheet_id
+           AND mustersheets.is_active = true
+           AND (mustersheets.expires_at IS NULL OR mustersheets.expires_at > now())
+       )
+     );`
+];
+
+/**
+ * Apply each SQL statement in RLS_SQL sequentially, logging progress.
  */
 async function applyRLSPolicies() {
-  console.log('\x1b[34m%s\x1b[0m', 'Calling apply_rls_policies() function...');
-  
-  const { data, error } = await supabase.rpc('apply_rls_policies');
+  console.log('\x1b[34m%s\x1b[0m', 'Applying Row-Level-Security policies (direct SQL)…');
 
-  if (error) {
-    throw new Error(`apply_rls_policies failed: ${error.message}`);
+  for (let i = 0; i < RLS_SQL.length; i++) {
+    const sql = RLS_SQL[i];
+    console.log(`   → [${i + 1}/${RLS_SQL.length}]`);
+
+    const { error } = await supabase.rpc('pgaudit.exec_sql', { sql });
+
+    if (error) {
+      // Ignore “already exists” messages so the script is idempotent
+      if (/already exists/i.test(error.message)) {
+        console.log('     ⚠️  already exists – skipped');
+      } else {
+        throw new Error(`SQL failed: ${error.message}\nStatement: ${sql}`);
+      }
+    } else {
+      console.log('     ✅ done');
+    }
   }
-  
-  console.log('\x1b[32m%s\x1b[0m', '✅ RLS function executed successfully');
-  console.log('\x1b[32m%s\x1b[0m', `Status: ${data.status}, Policies Applied: ${data.policies_applied}`);
+
+  console.log('\n\x1b[32m%s\x1b[0m', '✅ All RLS statements executed.');
 }
 
 // Execute the script
