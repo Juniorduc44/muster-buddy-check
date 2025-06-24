@@ -14,6 +14,8 @@ import {
   BarChart3
 } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
 // Correct table type to align with Supabase schema
 type MusterSheet = Tables<'mustersheets'>;
@@ -23,8 +25,9 @@ interface MusterSheetCardProps {
   onUpdate: () => void;
 }
 
-export const MusterSheetCard = ({ sheet }: MusterSheetCardProps) => {
+export const MusterSheetCard = ({ sheet, onUpdate }: MusterSheetCardProps) => {
   const { toast } = useToast();
+  const { user }   = useAuth();
   const attendanceUrl = `${window.location.origin}/attend/${sheet.id}`;
   const resultsUrl = `${window.location.origin}/results/${sheet.id}`;
   
@@ -41,6 +44,45 @@ export const MusterSheetCard = ({ sheet }: MusterSheetCardProps) => {
         description: "Could not copy link to clipboard",
         variant: "destructive",
       });
+    }
+  };
+
+  // --- Clone sheet ----------------------------------------------------
+  const handleCloneSheet = async () => {
+    if (!user) {
+      toast({
+        title: 'Authentication required',
+        description: 'Please sign in to clone a sheet.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const cloned = {
+      creator_id: user.id,
+      title: `Copy of ${sheet.title}`,
+      description: sheet.description,
+      required_fields: sheet.required_fields,
+      time_format: sheet.time_format,
+      expires_at: sheet.expires_at,
+      is_active: true,
+    };
+
+    const { error } = await supabase.from('mustersheets').insert([cloned]);
+
+    if (error) {
+      console.error('Clone error', error);
+      toast({
+        title: 'Error',
+        description: 'Unable to clone sheet. Please try again.',
+        variant: 'destructive',
+      });
+    } else {
+      toast({
+        title: 'Sheet cloned!',
+        description: `"${sheet.title}" duplicated successfully.`,
+      });
+      onUpdate(); // refresh list
     }
   };
 
@@ -132,9 +174,9 @@ export const MusterSheetCard = ({ sheet }: MusterSheetCardProps) => {
             size="sm"
             variant="outline"
             className="border-gray-600 text-gray-300 hover:bg-gray-700"
-            onClick={() => window.open(resultsUrl, '_blank')}
+            onClick={handleCloneSheet}
           >
-            <BarChart3 className="h-4 w-4" />
+            <Copy className="h-4 w-4" />
           </Button>
         </div>
 
