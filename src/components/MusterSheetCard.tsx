@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -26,7 +27,7 @@ interface MusterSheetCardProps {
 
 export const MusterSheetCard = ({ sheet, onUpdate }: MusterSheetCardProps) => {
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user }   = useAuth();
   const attendanceUrl = `${window.location.origin}/attend/${sheet.id}`;
   const resultsUrl = `${window.location.origin}/results/${sheet.id}`;
   
@@ -46,52 +47,42 @@ export const MusterSheetCard = ({ sheet, onUpdate }: MusterSheetCardProps) => {
     }
   };
 
+  // --- Clone sheet ----------------------------------------------------
   const handleCloneSheet = async () => {
     if (!user) {
       toast({
-        title: "Authentication Required",
-        description: "You must be logged in to clone a sheet.",
-        variant: "destructive",
+        title: 'Authentication required',
+        description: 'Please sign in to clone a sheet.',
+        variant: 'destructive',
       });
       return;
     }
 
-    try {
-      const newSheetData = {
-        creator_id: user.id,
-        title: `Copy of ${sheet.title}`,
-        description: sheet.description,
-        required_fields: sheet.required_fields,
-        time_format: sheet.time_format,
-        expires_at: sheet.expires_at, // Copy expiration date
-        is_active: true, // New sheet is active by default
-      };
+    const cloned = {
+      creator_id: user.id,
+      title: `Copy of ${sheet.title}`,
+      description: sheet.description,
+      required_fields: sheet.required_fields,
+      time_format: sheet.time_format,
+      expires_at: sheet.expires_at,
+      is_active: true,
+    };
 
-      const { error } = await supabase
-        .from('mustersheets')
-        .insert([newSheetData]);
+    const { error } = await supabase.from('mustersheets').insert([cloned]);
 
-      if (error) {
-        console.error('Error cloning sheet:', error);
-        toast({
-          title: "Error",
-          description: "Failed to clone sheet. Please try again.",
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Sheet Cloned!",
-          description: `"${sheet.title}" has been successfully duplicated.`,
-        });
-        onUpdate(); // Refresh the list of sheets
-      }
-    } catch (error) {
-      console.error('Unexpected error during cloning:', error);
+    if (error) {
+      console.error('Clone error', error);
       toast({
-        title: "Error",
-        description: "An unexpected error occurred while cloning the sheet.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Unable to clone sheet. Please try again.',
+        variant: 'destructive',
       });
+    } else {
+      toast({
+        title: 'Sheet cloned!',
+        description: `"${sheet.title}" duplicated successfully.`,
+      });
+      onUpdate(); // refresh list
     }
   };
 
