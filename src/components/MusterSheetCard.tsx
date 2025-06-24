@@ -9,7 +9,8 @@ import {
   QrCode, 
   ExternalLink, 
   Calendar,
-  Copy
+  Copy,
+  BarChart3
 } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 import { supabase } from '@/integrations/supabase/client';
@@ -27,6 +28,7 @@ export const MusterSheetCard = ({ sheet, onUpdate }: MusterSheetCardProps) => {
   const { toast } = useToast();
   const { user } = useAuth();
   const attendanceUrl = `${window.location.origin}/attend/${sheet.id}`;
+  const resultsUrl   = `${window.location.origin}/results/${sheet.id}`;
   
   const handleCopyLink = async () => {
     try {
@@ -196,6 +198,15 @@ export const MusterSheetCard = ({ sheet, onUpdate }: MusterSheetCardProps) => {
           >
             <ExternalLink className="h-4 w-4 mr-2" />
             View Attendance Page
+          </a>
+          <a
+            href={resultsUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center text-sm text-blue-400 hover:text-blue-300"
+          >
+            <BarChart3 className="h-4 w-4 mr-2" />
+            View Results & Analytics
           </a>
         </div>
       </CardContent>
