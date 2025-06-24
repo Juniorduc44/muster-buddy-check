@@ -28,7 +28,7 @@ export const MusterSheetCard = ({ sheet, onUpdate }: MusterSheetCardProps) => {
   const { toast } = useToast();
   const { user } = useAuth();
   const attendanceUrl = `${window.location.origin}/attend/${sheet.id}`;
-  const resultsUrl   = `${window.location.origin}/results/${sheet.id}`;
+  const resultsUrl = `${window.location.origin}/results/${sheet.id}`;
   
   const handleCopyLink = async () => {
     try {
