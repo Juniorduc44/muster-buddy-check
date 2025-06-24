@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,10 +9,11 @@ import {
   QrCode, 
   ExternalLink, 
   Calendar,
-  Copy,
-  BarChart3
+  Copy
 } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
 // Correct table type to align with Supabase schema
 type MusterSheet = Tables<'mustersheets'>;
@@ -23,10 +23,10 @@ interface MusterSheetCardProps {
   onUpdate: () => void;
 }
 
-export const MusterSheetCard = ({ sheet }: MusterSheetCardProps) => {
+export const MusterSheetCard = ({ sheet, onUpdate }: MusterSheetCardProps) => {
   const { toast } = useToast();
+  const { user } = useAuth();
   const attendanceUrl = `${window.location.origin}/attend/${sheet.id}`;
-  const resultsUrl = `${window.location.origin}/results/${sheet.id}`;
   
   const handleCopyLink = async () => {
     try {
@@ -39,6 +39,55 @@ export const MusterSheetCard = ({ sheet }: MusterSheetCardProps) => {
       toast({
         title: "Failed to copy",
         description: "Could not copy link to clipboard",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleCloneSheet = async () => {
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "You must be logged in to clone a sheet.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const newSheetData = {
+        creator_id: user.id,
+        title: `Copy of ${sheet.title}`,
+        description: sheet.description,
+        required_fields: sheet.required_fields,
+        time_format: sheet.time_format,
+        expires_at: sheet.expires_at, // Copy expiration date
+        is_active: true, // New sheet is active by default
+      };
+
+      const { error } = await supabase
+        .from('mustersheets')
+        .insert([newSheetData]);
+
+      if (error) {
+        console.error('Error cloning sheet:', error);
+        toast({
+          title: "Error",
+          description: "Failed to clone sheet. Please try again.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Sheet Cloned!",
+          description: `"${sheet.title}" has been successfully duplicated.`,
+        });
+        onUpdate(); // Refresh the list of sheets
+      }
+    } catch (error) {
+      console.error('Unexpected error during cloning:', error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred while cloning the sheet.",
         variant: "destructive",
       });
     }
@@ -132,9 +181,9 @@ export const MusterSheetCard = ({ sheet }: MusterSheetCardProps) => {
             size="sm"
             variant="outline"
             className="border-gray-600 text-gray-300 hover:bg-gray-700"
-            onClick={() => window.open(resultsUrl, '_blank')}
+            onClick={handleCloneSheet}
           >
-            <BarChart3 className="h-4 w-4" />
+            <Copy className="h-4 w-4" />
           </Button>
         </div>
 
@@ -147,15 +196,6 @@ export const MusterSheetCard = ({ sheet }: MusterSheetCardProps) => {
           >
             <ExternalLink className="h-4 w-4 mr-2" />
             View Attendance Page
-          </a>
-          <a
-            href={resultsUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center text-sm text-blue-400 hover:text-blue-300"
-          >
-            <BarChart3 className="h-4 w-4 mr-2" />
-            View Results & Analytics
           </a>
         </div>
       </CardContent>
