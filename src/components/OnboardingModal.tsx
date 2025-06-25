@@ -36,11 +36,8 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
             <img
               src={musterLogo}
               alt="MusterSheets Logo"
-              className="mx-auto h-48 w-auto"
+              className="mx-auto h-60 w-auto"
             />
-            <h2 className="text-4xl font-extrabold text-white">
-              MusterSheets
-            </h2>
             <p className="text-gray-300 text-lg max-w-xl">
               Digital&nbsp;Secure&nbsp;Sign-In made effortless.
             </p>
