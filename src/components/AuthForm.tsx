@@ -7,7 +7,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Mail, Lock, Zap, Users } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Github } from 'lucide-react';
-import musterLogo from '@/assets/images/muster_logo.png';
+
 
 export const AuthForm = () => {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -154,13 +154,6 @@ export const AuthForm = () => {
     <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
       <Card className="w-full max-w-md bg-gray-800 border-gray-700">
         <CardHeader className="text-center">
-          <div className="flex justify-center mb-4">
-            <img
-              src={musterLogo}
-              alt="MusterSheets Logo"
-              className="h-40 w-auto" 
-            />
-          </div>
           <CardTitle className="text-2xl font-bold text-white">
             {isMagicLink ? 'Magic Link Sign In' : (isSignUp ? 'Create Account' : 'Sign In')}
           </CardTitle>
