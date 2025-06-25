@@ -10,7 +10,6 @@ import NotFound from "./pages/NotFound";
 import { AttendancePage } from "./pages/AttendancePage";
 import { ResultsPage } from "./pages/ResultsPage";
 import { QRCodePage } from "./pages/QRCodePage";
-import { EditSheetPage } from "./pages/EditSheetPage";
 
 const queryClient = new QueryClient();
 
@@ -28,7 +27,6 @@ const App = () => (
             {/* Protected routes */}
             <Route path="/results/:sheetId" element={<ResultsPage />} />
             <Route path="/qr/:sheetId" element={<QRCodePage />} />
-            <Route path="/edit/:sheetId" element={<EditSheetPage />} />
             {/* Catch-all 404 route */}
             <Route path="*" element={<NotFound />} />
           </Routes>
