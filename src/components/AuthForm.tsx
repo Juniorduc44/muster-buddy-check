@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -8,6 +7,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Mail, Lock, Zap, Users } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Github } from 'lucide-react';
+import musterLogo from '@/assets/images/muster_logo.png';
+
 export const AuthForm = () => {
   const [isSignUp, setIsSignUp] = useState(false);
   const [isMagicLink, setIsMagicLink] = useState(false);
@@ -52,7 +53,7 @@ export const AuthForm = () => {
         | { error: { message: string } | null }
         | { error: { message: string } | null | undefined } = { error: null };
 
-      // Prefer the hook’s helper if it exists; fall back to direct supabase call.
+      // Prefer the hook's helper if it exists; fall back to direct supabase call.
       if (typeof signInWithOAuth === 'function') {
         // @ts-ignore – signature depends on AuthContext implementation
         result = await signInWithOAuth('github');
@@ -150,8 +151,25 @@ export const AuthForm = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md bg-gray-800 border-gray-700">
+    <div className="min-h-screen flex flex-col bg-gray-900">
+      {/* Top half: Branded welcome area with logo */}
+      <section className="flex-1 flex flex-col items-center justify-center bg-gradient-to-b from-[#042b1c] to-gray-900 text-center px-6">
+        <img
+          src={musterLogo}
+          alt="MusterSheets Logo"
+          className="h-40 w-auto mb-4" 
+        />
+        <h1 className="text-5xl md:text-6xl font-extrabold text-white tracking-wide">
+          MusterSheets
+        </h1>
+        <p className="mt-4 text-lg text-gray-300 max-w-xl">
+          Digital&nbsp;Secure&nbsp;Sign-In made effortless. Create a sheet, share
+          a QR code, track attendance – all in seconds.
+        </p>
+      </section>
+
+      {/* Bottom half: Login card */}
+      <Card className="w-full max-w-md mx-auto -mt-16 bg-gray-800 border-gray-700 shadow-lg">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold text-white">
             {isMagicLink ? 'Magic Link Sign In' : (isSignUp ? 'Create Account' : 'Sign In')}
