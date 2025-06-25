@@ -109,6 +109,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signOut = async () => {
     localStorage.removeItem('guest_mode');
     localStorage.removeItem('guest_sheet_id');
+    // Ensure onboarding modal does NOT show right after sign-out
+    // (only show for brand-new visitors hitting the root domain)
+    localStorage.setItem('onboarding_seen', 'true');
     setIsGuest(false);
     const { error } = await supabase.auth.signOut();
     return { error };

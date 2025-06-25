@@ -1,13 +1,13 @@
-
 import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Shield, Mail, Lock, Zap, Users } from 'lucide-react';
+import { Mail, Lock, Zap, Users } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Github } from 'lucide-react';
+
 
 export const AuthForm = () => {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -53,7 +53,7 @@ export const AuthForm = () => {
         | { error: { message: string } | null }
         | { error: { message: string } | null | undefined } = { error: null };
 
-      // Prefer the hook’s helper if it exists; fall back to direct supabase call.
+      // Prefer the hook's helper if it exists; fall back to direct supabase call.
       if (typeof signInWithOAuth === 'function') {
         // @ts-ignore – signature depends on AuthContext implementation
         result = await signInWithOAuth('github');
@@ -154,9 +154,6 @@ export const AuthForm = () => {
     <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
       <Card className="w-full max-w-md bg-gray-800 border-gray-700">
         <CardHeader className="text-center">
-          <div className="flex justify-center mb-4">
-            <Shield className="h-12 w-12 text-green-400" />
-          </div>
           <CardTitle className="text-2xl font-bold text-white">
             {isMagicLink ? 'Magic Link Sign In' : (isSignUp ? 'Create Account' : 'Sign In')}
           </CardTitle>

@@ -46,10 +46,11 @@ const PRESET_TEMPLATES = [
   },
   {
     id: 'class',
-    name: 'Class Reunion',
+    name: 'Class Attendance',
     icon: <GraduationCap className="h-5 w-5" />,
-    description: 'Track attendance for class reunions',
-    fields: ['first_name', 'last_name', 'email', 'phone'],
+    description: 'Track attendance for college or certification classes',
+    // Added badge_number (student ID) to stay in sync with preloaded-sheets.ts
+    fields: ['first_name', 'last_name', 'email', 'phone', 'badge_number'],
     timeFormat: 'standard' as const
   },
   {
