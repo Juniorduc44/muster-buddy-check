@@ -153,7 +153,6 @@ export const AuthForm = () => {
     <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
       <Card className="w-full max-w-md bg-gray-800 border-gray-700">
         <CardHeader className="text-center">
-          {/* Removed in-card logo; full-screen splash now lives in onboarding modal */}
           <CardTitle className="text-2xl font-bold text-white">
             {isMagicLink ? 'Magic Link Sign In' : (isSignUp ? 'Create Account' : 'Sign In')}
           </CardTitle>
