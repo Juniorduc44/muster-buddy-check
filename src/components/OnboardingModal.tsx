@@ -10,7 +10,8 @@ interface OnboardingModalProps {
 }
 
 export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClose }) => {
-  const [currentStep, setCurrentStep] = useState(1);
+  // 0 = splash logo, 1-3 = informational slides
+  const [currentStep, setCurrentStep] = useState(0);
 
   if (!isOpen) return null;
 
@@ -29,6 +30,22 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
 
   const renderStepContent = () => {
     switch (currentStep) {
+      case 0:
+        return (
+          <div className="flex flex-col items-center justify-center text-center space-y-6">
+            <img
+              src={musterLogo}
+              alt="MusterSheets Logo"
+              className="mx-auto h-48 w-auto"
+            />
+            <h2 className="text-4xl font-extrabold text-white">
+              MusterSheets
+            </h2>
+            <p className="text-gray-300 text-lg max-w-xl">
+              Digital&nbsp;Secure&nbsp;Sign-In made effortless.
+            </p>
+          </div>
+        );
       case 1:
         return (
           <div className="text-center space-y-6">
@@ -93,12 +110,19 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
   return (
     <div className="fixed inset-0 bg-black/75 flex items-center justify-center p-4 z-50">
       <Card className="w-full max-w-2xl bg-gray-800 border-gray-700 text-white shadow-lg">
-        <CardHeader className="flex flex-row justify-between items-center border-b border-gray-700 pb-4">
-          <CardTitle className="text-xl font-semibold">MusterSheets Onboarding</CardTitle>
-          <Button variant="ghost" size="icon" onClick={handleClose} className="text-gray-400 hover:text-white">
-            <X className="h-5 w-5" />
-          </Button>
-        </CardHeader>
+        {currentStep > 0 && (
+          <CardHeader className="flex flex-row justify-between items-center border-b border-gray-700 pb-4">
+            <CardTitle className="text-xl font-semibold">MusterSheets Onboarding</CardTitle>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleClose}
+              className="text-gray-400 hover:text-white"
+            >
+              <X className="h-5 w-5" />
+            </Button>
+          </CardHeader>
+        )}
         <CardContent className="p-6">
           {renderStepContent()}
           <div className="flex justify-between mt-8">
@@ -107,11 +131,20 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
                 <ArrowLeft className="h-4 w-4 mr-2" /> Back
               </Button>
             )}
-            {currentStep < 3 ? (
+            {currentStep === 0 && (
+              <Button
+                onClick={handleNext}
+                className="mx-auto bg-green-600 hover:bg-green-700 text-white"
+              >
+                Get Started <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
+            )}
+            {currentStep > 0 && currentStep < 3 && (
               <Button onClick={handleNext} className="ml-auto bg-green-600 hover:bg-green-700 text-white">
                 Next <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
-            ) : (
+            )}
+            {currentStep === 3 && (
               // This button is handled within renderStepContent for step 3
               <div className="flex-grow"></div> 
             )}

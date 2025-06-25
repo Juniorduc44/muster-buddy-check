@@ -5,11 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Shield, Mail, Lock, Zap, Users } from 'lucide-react';
+import { Mail, Lock, Zap, Users } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Github } from 'lucide-react';
-import musterLogo from '@/assets/images/muster_logo.png';
-
 export const AuthForm = () => {
   const [isSignUp, setIsSignUp] = useState(false);
   const [isMagicLink, setIsMagicLink] = useState(false);
@@ -155,14 +153,7 @@ export const AuthForm = () => {
     <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
       <Card className="w-full max-w-md bg-gray-800 border-gray-700">
         <CardHeader className="text-center">
-          <div className="flex justify-center mb-4">
-            {/* MusterSheets logo */}
-            <img
-              src={musterLogo}
-              alt="MusterSheets Logo"
-              className="h-20 w-auto"
-            />
-          </div>
+          {/* Removed in-card logo; full-screen splash now lives in onboarding modal */}
           <CardTitle className="text-2xl font-bold text-white">
             {isMagicLink ? 'Magic Link Sign In' : (isSignUp ? 'Create Account' : 'Sign In')}
           </CardTitle>
