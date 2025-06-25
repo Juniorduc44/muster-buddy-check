@@ -151,26 +151,16 @@ export const AuthForm = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-900">
-      {/* Top half: Branded welcome area with logo */}
-      <section className="flex-1 flex flex-col items-center justify-center bg-gradient-to-b from-[#042b1c] to-gray-900 text-center px-6">
-        <img
-          src={musterLogo}
-          alt="MusterSheets Logo"
-          className="h-40 w-auto mb-4" 
-        />
-        <h1 className="text-5xl md:text-6xl font-extrabold text-white tracking-wide">
-          MusterSheets
-        </h1>
-        <p className="mt-4 text-lg text-gray-300 max-w-xl">
-          Digital&nbsp;Secure&nbsp;Sign-In made effortless. Create a sheet, share
-          a QR code, track attendance – all in seconds.
-        </p>
-      </section>
-
-      {/* Bottom half: Login card */}
-      <Card className="w-full max-w-md mx-auto -mt-16 bg-gray-800 border-gray-700 shadow-lg">
+    <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
+      <Card className="w-full max-w-md bg-gray-800 border-gray-700">
         <CardHeader className="text-center">
+          <div className="flex justify-center mb-4">
+            <img
+              src={musterLogo}
+              alt="MusterSheets Logo"
+              className="h-40 w-auto" 
+            />
+          </div>
           <CardTitle className="text-2xl font-bold text-white">
             {isMagicLink ? 'Magic Link Sign In' : (isSignUp ? 'Create Account' : 'Sign In')}
           </CardTitle>

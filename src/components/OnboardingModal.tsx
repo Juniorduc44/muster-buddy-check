@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { X, ArrowLeft, ArrowRight } from 'lucide-react';
-import musterLogo from '@/assets/images/musterSheets_logo.png'; // Assuming musterSheets_logo.png is the desired logo
+import musterLogo from '@/assets/images/muster_logo.png'; // Assuming muster_logo.png is the desired logo
 
 interface OnboardingModalProps {
   isOpen: boolean;
@@ -24,7 +24,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
   };
 
   const handleClose = () => {
-    setCurrentStep(1); // Reset to first step on close
+    setCurrentStep(0); // Reset to first step on close
     onClose();
   };
 
