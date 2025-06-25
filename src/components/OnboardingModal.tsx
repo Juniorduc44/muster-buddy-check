@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { X, ArrowLeft, ArrowRight } from 'lucide-react';
-import musterLogo from '@/assets/images/muster_logo.png'; // Assuming muster_logo.png is the desired logo
+import musterLogo from '@/assets/images/muster_logo.png';
 
 interface OnboardingModalProps {
   isOpen: boolean;
@@ -12,6 +13,7 @@ interface OnboardingModalProps {
 export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClose }) => {
   // 0 = splash logo, 1-3 = informational slides
   const [currentStep, setCurrentStep] = useState(0);
+  const [dontShowAgain, setDontShowAgain] = useState(false);
 
   if (!isOpen) return null;
 
@@ -24,6 +26,9 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
   };
 
   const handleClose = () => {
+    if (dontShowAgain) {
+      localStorage.setItem('onboarding_seen', 'true');
+    }
     setCurrentStep(0); // Reset to first step on close
     onClose();
   };
@@ -46,7 +51,6 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
       case 1:
         return (
           <div className="text-center space-y-6">
-            <img src={musterLogo} alt="MusterSheets Logo" className="mx-auto h-32 w-auto mb-4" />
             <h2 className="text-3xl font-bold text-white">Welcome to MusterSheets!</h2>
             <p className="text-gray-300 text-lg">
               Your effortless solution for digital attendance tracking.
@@ -94,7 +98,18 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
             <p className="text-gray-400">
               Sign in or create an account to unlock all features and keep your attendance records safe.
             </p>
-            <Button onClick={handleClose} className="w-full bg-green-600 hover:bg-green-700 text-white">
+            <div className="flex items-center justify-center space-x-2 mt-6">
+              <Checkbox
+                id="dontShowAgain"
+                checked={dontShowAgain}
+                onCheckedChange={setDontShowAgain}
+                className="border-gray-400 data-[state=checked]:bg-green-600 data-[state=checked]:text-white"
+              />
+              <label htmlFor="dontShowAgain" className="text-sm text-gray-300 cursor-pointer">
+                Don't show this again
+              </label>
+            </div>
+            <Button onClick={handleClose} className="w-full bg-green-600 hover:bg-green-700 text-white mt-4">
               Let's Go!
             </Button>
           </div>
@@ -107,23 +122,20 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
   return (
     <div className="fixed inset-0 bg-black/75 flex items-center justify-center p-4 z-50">
       <Card className="w-full max-w-2xl bg-gray-800 border-gray-700 text-white shadow-lg">
-        {currentStep > 0 && (
-          <CardHeader className="flex flex-row justify-between items-center border-b border-gray-700 pb-4">
+        <CardHeader className="flex flex-row justify-between items-center border-b border-gray-700 pb-4">
+          {currentStep > 0 ? (
             <CardTitle className="text-xl font-semibold">MusterSheets Onboarding</CardTitle>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleClose}
-              className="text-gray-400 hover:text-white"
-            >
-              <X className="h-5 w-5" />
-            </Button>
-          </CardHeader>
-        )}
+          ) : (
+            <div /> // Empty div to maintain spacing for the close button
+          )}
+          <Button variant="ghost" size="icon" onClick={handleClose} className="text-gray-400 hover:text-white">
+            <X className="h-5 w-5" />
+          </Button>
+        </CardHeader>
         <CardContent className="p-6">
           {renderStepContent()}
           <div className="flex justify-between mt-8">
-            {currentStep > 1 && (
+            {currentStep > 0 && currentStep < 3 && (
               <Button onClick={handleBack} variant="outline" className="border-gray-600 text-gray-300 hover:bg-gray-700">
                 <ArrowLeft className="h-4 w-4 mr-2" /> Back
               </Button>
