@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { X, ArrowLeft, ArrowRight } from 'lucide-react';
-import musterLogo from '@/assets/images/muster_logo.png';
+import musterLogo from '@/assets/images/musterSheets_logo.png';
 
 interface OnboardingModalProps {
   isOpen: boolean;
@@ -41,11 +41,8 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
             <img
               src={musterLogo}
               alt="MusterSheets Logo"
-              className="mx-auto h-60 w-auto"
+              className="mx-auto h-72 w-auto" /* larger logo */
             />
-            <p className="text-gray-300 text-lg max-w-xl">
-              Digital&nbsp;Secure&nbsp;Sign-In made effortless.
-            </p>
           </div>
         );
       case 1:
