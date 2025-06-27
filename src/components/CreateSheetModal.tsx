@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -8,13 +9,75 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { X, Plus, Clock, Calendar, Users, GraduationCap, Heart, Building } from 'lucide-react';
-import { FIELD_OPTIONS, PRESET_TEMPLATES } from '@/data/preloaded-sheets.tsx';
 
 interface CreateSheetModalProps {
   open: boolean;
   onClose: () => void;
   onSheetCreated: () => void;
 }
+
+const FIELD_OPTIONS = [
+  { id: 'first_name', label: 'First Name', required: true },
+  { id: 'last_name', label: 'Last Name', required: true },
+  { id: 'email', label: 'Email Address', required: false },
+  { id: 'phone', label: 'Phone Number', required: false },
+  { id: 'rank', label: 'Rank/Position', required: false },
+  { id: 'unit', label: 'Unit/Department', required: false },
+  { id: 'badge_number', label: 'Badge/ID Number', required: false },
+  { id: 'age', label: 'Age', required: false },
+];
+
+const PRESET_TEMPLATES = [
+  {
+    id: 'military',
+    name: 'Military Formation',
+    icon: <Building className="h-5 w-5" />,
+    description: 'For military formations and inspections',
+    fields: ['first_name', 'last_name', 'rank', 'unit', 'badge_number'],
+    timeFormat: 'military' as const
+  },
+  {
+    id: 'family',
+    name: 'Family Reunion',
+    icon: <Heart className="h-5 w-5" />,
+    description: 'Perfect for family gatherings and reunions',
+    fields: ['first_name', 'last_name', 'email', 'phone', 'age'],
+    timeFormat: 'standard' as const
+  },
+  {
+    id: 'class',
+    name: 'Class Attendance',
+    icon: <GraduationCap className="h-5 w-5" />,
+    description: 'Track attendance for college or certification classes',
+    // Added badge_number (student ID) to stay in sync with preloaded-sheets.ts
+    fields: ['first_name', 'last_name', 'email', 'phone', 'badge_number'],
+    timeFormat: 'standard' as const
+  },
+  {
+    id: 'corporate',
+    name: 'Corporate Meeting',
+    icon: <Building className="h-5 w-5" />,
+    description: 'Professional meetings and conferences',
+    fields: ['first_name', 'last_name', 'email', 'unit'],
+    timeFormat: 'standard' as const
+  },
+  {
+    id: 'event',
+    name: 'General Event',
+    icon: <Users className="h-5 w-5" />,
+    description: 'Any type of gathering or event',
+    fields: ['first_name', 'last_name', 'email'],
+    timeFormat: 'standard' as const
+  },
+  {
+    id: 'custom',
+    name: 'Custom',
+    icon: <Plus className="h-5 w-5" />,
+    description: 'Create your own custom template',
+    fields: ['first_name', 'last_name'],
+    timeFormat: 'standard' as const
+  }
+];
 
 export const CreateSheetModal = ({ open, onClose, onSheetCreated }: CreateSheetModalProps) => {
   const { user } = useAuth();

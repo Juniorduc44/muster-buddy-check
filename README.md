@@ -1,17 +1,9 @@
 # Welcome to your Lovable project
 
 > **Project Name**: **Muster Buddy Check**  
-> **Current Version**: **v3.3.0**
+> **Current Version**: **v2.0.0**
 
-Muster Buddy Check is a lightweight attendance-tracking web application designed for colleges, clubs and events.  
-Attendees simply scan a QR code or click a shareable link—no account needed.
-
-### ⭐ Key features
-* **Public QR / link sign-in** – zero-friction attendance capture.  
-* **GitHub OAuth login** – creators sign in with one click.  
-* **One-click “Clone Sheet”** – duplicate any muster sheet instantly.  
-* **Row-Level Security (RLS)** – public submissions, private results.  
-* **MIT-licensed** – fork it, remix it, use it commercially.
+Muster Buddy Check is a lightweight attendance-tracking web application designed for colleges, clubs and events.  Attendees simply scan a QR code or click a shareable link—no account needed.
 
 ---
 
@@ -25,9 +17,8 @@ Attendees simply scan a QR code or click a shareable link—no account needed.
 7. Local testing from other devices  
 8. Using the QR-code attendance flow  
 9. Deployment  
-10. MIT License  
-11. Change log  
-12. Editing options (Lovable, IDE, Codespaces)
+10. Change log (v1.1.0 → v2.0.0)  
+11. Editing options (Lovable, IDE, Codespaces)
 
 ---
 
@@ -64,9 +55,6 @@ Required keys:
 * `SUPABASE_URL=https://<project-id>.supabase.co`
 * `SUPABASE_SERVICE_KEY=<SERVICE_ROLE_KEY>` (used **only** by the CLI script)
 * `VITE_SUPABASE_ANON_KEY=<PUBLIC_ANON_KEY>` (exposed to the browser)
-* Optional branding:  
-  * `VITE_APP_BRAND_NAME="My College Muster"`  
-  * `VITE_APP_BRAND_LOGO=/path/to/logo.svg`
 
 ## 5. Running the RLS policy script
 We ship an automated helper to apply Row Level Security (RLS) policies that make attendance pages public while still securing private data.
@@ -143,19 +131,7 @@ Lovable handles build & hosting automatically.
 
 Remember: self-hosted CI/CD will **not** run the RLS script automatically—you must execute `npm run apply-rls` once, or run the SQL manually.
 
-## 10. MIT License
-
-This project is distributed under the [MIT License](LICENSE).  
-You may use, copy, modify, merge, publish, distribute, sublicense and/or sell copies of the software, provided that you include the original copyright and license.
-
-## 11. Change log
-
-### v3.3.0 — 2025-06-24
-* **MIT License** – project is now fully open-source and business-friendly.  
-* **GitHub OAuth** – quick sign-in for instructors.  
-* **Clone button** – duplicate sheets with all settings intact.  
-
-### v2.0.0 — 2025-06-21
+## 10. Change log
 
 ### v2.0.0 — 2025-06-21
 * Public attendance pages powered by new **Row Level Security** policies  
