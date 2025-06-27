@@ -1,7 +1,7 @@
 {
   "name": "vite_react_shadcn_ts",
   "private": true,
-  "version": "3.0.0",
+  "version": "3.4.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -9,7 +9,9 @@
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",
-    "apply-rls": "node scripts/apply-rls-policies.js"
+    "apply-rls": "node scripts/apply-rls-policies.js",
+    "postbuild": "npm run apply-rls",
+    "setup-local-auth": "node scripts/setup-local-auth.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
