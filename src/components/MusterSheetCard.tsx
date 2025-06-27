@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,6 +10,7 @@ import {
   ExternalLink, 
   Calendar,
   Copy,
+  Edit2,
   BarChart3
 } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
@@ -95,6 +95,13 @@ export const MusterSheetCard = ({ sheet, onUpdate }: MusterSheetCardProps) => {
   };
 
   const isExpired = sheet.expires_at && new Date(sheet.expires_at) < new Date();
+  const canEdit = sheet.is_active && !isExpired;
+
+  // --- Edit sheet ----------------------------------------------------
+  const handleEditSheet = () => {
+    // Navigate to edit page in a new tab (adjust path as needed)
+    window.open(`/edit/${sheet.id}`, '_blank');
+  };
 
   return (
     <Card className="bg-gray-800 border-gray-700 hover:border-gray-600 transition-colors">
@@ -169,6 +176,15 @@ export const MusterSheetCard = ({ sheet, onUpdate }: MusterSheetCardProps) => {
             onClick={() => window.open(`/qr/${sheet.id}`, '_blank')}
           >
             <QrCode className="h-4 w-4" />
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="border-gray-600 text-gray-300 hover:bg-gray-700"
+            onClick={handleEditSheet}
+            disabled={!canEdit}
+          >
+            <Edit2 className="h-4 w-4" />
           </Button>
           <Button
             size="sm"

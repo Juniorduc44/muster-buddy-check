@@ -1,26 +1,33 @@
 -- create_tables_and_policies.sql
--- This script creates the necessary database tables and applies Row Level Security (RLS) policies
--- for the Muster Buddy Check application.
+-- Comprehensive setup script for Muster Buddy Check database
+-- This script creates all necessary tables, indexes, constraints, and
+-- applies Row Level Security (RLS) policies from scratch.
 
--- Part 1: Create Tables
+-- =====================================================================
+-- PART 1: CREATE TABLES
+-- =====================================================================
+
 -- Create mustersheets table
-CREATE TABLE IF NOT EXISTS public.mustersheets (
+CREATE TABLE public.mustersheets (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT now() NOT NULL,
     creator_id UUID NOT NULL REFERENCES auth.users(id),
     title TEXT NOT NULL,
     description TEXT,
     is_active BOOLEAN DEFAULT true NOT NULL,
-    expires_at TIMESTAMP WITH TIME ZONE,
+    expires_at TIMESTAMPTZ,
     required_fields TEXT[] DEFAULT ARRAY['first_name', 'last_name']::TEXT[] NOT NULL,
-    time_format TEXT DEFAULT 'military' NOT NULL
+    time_format TEXT DEFAULT 'standard' NOT NULL,
+    location TEXT,
+    event_date DATE,
+    event_type TEXT
 );
 
 -- Create musterentries table
-CREATE TABLE IF NOT EXISTS public.musterentries (
+CREATE TABLE public.musterentries (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
     sheet_id UUID NOT NULL REFERENCES public.mustersheets(id) ON DELETE CASCADE,
     first_name TEXT NOT NULL,
     last_name TEXT NOT NULL,
@@ -30,20 +37,57 @@ CREATE TABLE IF NOT EXISTS public.musterentries (
     badge_number TEXT,
     unit TEXT,
     age INTEGER,
-    timestamp TEXT NOT NULL DEFAULT to_char(now(), 'HH24:MI'),
-    user_id UUID REFERENCES auth.users(id)
+    timestamp TIMESTAMPTZ DEFAULT now() NOT NULL,
+    user_id UUID REFERENCES auth.users(id),
+    status TEXT DEFAULT 'present',
+    notes TEXT,
+    
+    -- Ensure unique attendance per sheet/person combination
+    CONSTRAINT unique_attendance UNIQUE (sheet_id, first_name, last_name, email)
 );
 
--- Create index on sheet_id for better query performance
-CREATE INDEX IF NOT EXISTS idx_musterentries_sheet_id ON public.musterentries(sheet_id);
+-- =====================================================================
+-- PART 2: CREATE INDEXES AND CONSTRAINTS
+-- =====================================================================
 
--- Part 2: Apply Row Level Security (RLS) Policies
+-- Indexes for mustersheets
+CREATE INDEX mustersheets_creator_id_idx ON public.mustersheets(creator_id);
+CREATE INDEX mustersheets_is_active_idx ON public.mustersheets(is_active);
+CREATE INDEX mustersheets_expires_at_idx ON public.mustersheets(expires_at);
 
--- Enable Row Level Security on mustersheets table
+-- Indexes for musterentries
+CREATE INDEX musterentries_sheet_id_idx ON public.musterentries(sheet_id);
+CREATE INDEX musterentries_user_id_idx ON public.musterentries(user_id);
+CREATE INDEX musterentries_timestamp_idx ON public.musterentries(timestamp);
+CREATE INDEX musterentries_name_idx ON public.musterentries(first_name, last_name);
+
+-- Add trigger for updated_at timestamp on mustersheets
+CREATE OR REPLACE FUNCTION update_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+   NEW.updated_at = now(); 
+   RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER set_timestamp_mustersheets
+BEFORE UPDATE ON public.mustersheets
+FOR EACH ROW
+EXECUTE FUNCTION update_timestamp();
+
+-- =====================================================================
+-- PART 3: ENABLE ROW LEVEL SECURITY
+-- =====================================================================
+
+-- Enable RLS on mustersheets table
 ALTER TABLE public.mustersheets ENABLE ROW LEVEL SECURITY;
 
--- Enable Row Level Security on musterentries table
+-- Enable RLS on musterentries table
 ALTER TABLE public.musterentries ENABLE ROW LEVEL SECURITY;
+
+-- =====================================================================
+-- PART 4: CREATE RLS POLICIES
+-- =====================================================================
 
 -- POLICY 1: Allow public read access to active mustersheets (needed for attendance page)
 -- This allows anyone to view active, non-expired mustersheets without authentication
@@ -99,9 +143,7 @@ CREATE POLICY "Attendees see only their entry"
     auth.uid() = user_id
   );
 
--- Optional: Add policies for UPDATE and DELETE on musterentries for creators
-
--- UPDATE rights for creators
+-- POLICY 6: UPDATE rights for creators
 CREATE POLICY "Creators can update entries"
   ON public.musterentries
   FOR UPDATE
@@ -114,7 +156,7 @@ CREATE POLICY "Creators can update entries"
     )
   );
 
--- DELETE rights for creators
+-- POLICY 7: DELETE rights for creators
 CREATE POLICY "Creators can delete entries"
   ON public.musterentries
   FOR DELETE
@@ -127,7 +169,21 @@ CREATE POLICY "Creators can delete entries"
     )
   );
 
--- Verification query (commented out - run separately if needed)
--- SELECT tablename, policyname, permissive, roles, cmd
--- FROM pg_policies
--- WHERE tablename IN ('mustersheets','musterentries');
+-- POLICY 8: Public can view entries for active sheets
+-- This allows anyone to see entries for public, active sheets
+CREATE POLICY "Public can view entries for active sheets"
+  ON public.musterentries
+  FOR SELECT
+  TO anon
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.mustersheets
+      WHERE mustersheets.id = musterentries.sheet_id
+        AND mustersheets.is_active = true
+        AND (mustersheets.expires_at IS NULL OR mustersheets.expires_at > now())
+    )
+  );
+
+-- =====================================================================
+-- END OF SCRIPT
+-- =====================================================================
