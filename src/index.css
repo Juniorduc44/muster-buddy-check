@@ -99,5 +99,13 @@
 
   body {
     @apply bg-background text-foreground;
+    overflow-x: hidden;
+  }
+}
+
+@media (max-width: 768px) {
+  .w-64 {
+    width: 100% !important;
+    max-width: 80vw;
   }
 }
