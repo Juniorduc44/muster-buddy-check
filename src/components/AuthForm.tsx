@@ -18,7 +18,7 @@ export const AuthForm = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signUp, signIn, signInWithMagicLink, setGuestMode, /* optional */ signInWithOAuth } = useAuth();
+  const { signUp, signIn, signInWithMagicLink, setGuestMode } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,18 +53,13 @@ export const AuthForm = () => {
         | { error: { message: string } | null }
         | { error: { message: string } | null | undefined } = { error: null };
 
-      // Prefer the hook's helper if it exists; fall back to direct supabase call.
-      if (typeof signInWithOAuth === 'function') {
-        // @ts-ignore – signature depends on AuthContext implementation
-        result = await signInWithOAuth('github');
-      } else {
-        result = await supabase.auth.signInWithOAuth({
-          provider: 'github',
-          options: {
-            redirectTo: `${window.location.origin}/`,
-          },
-        });
-      }
+      // Only use direct supabase call since signInWithOAuth is not in AuthContext
+      result = await supabase.auth.signInWithOAuth({
+        provider: 'github',
+        options: {
+          redirectTo: `${window.location.origin}/`,
+        },
+      });
 
       if (result?.error) {
         setError(result.error.message);
@@ -100,6 +95,7 @@ export const AuthForm = () => {
 
   const handleGuestMode = () => {
     setGuestMode();
+    window.location.href = '/'; // Force reload to pick up guest mode
   };
 
   if (showGuestInfo) {
