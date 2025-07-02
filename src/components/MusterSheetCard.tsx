@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -24,9 +23,12 @@ type MusterSheet = Tables<'mustersheets'>;
 interface MusterSheetCardProps {
   sheet: MusterSheet;
   onUpdate: () => void;
+  deleteMode?: boolean;
+  checked?: boolean;
+  onCheck?: (checked: boolean) => void;
 }
 
-export const MusterSheetCard = ({ sheet, onUpdate }: MusterSheetCardProps) => {
+export const MusterSheetCard = ({ sheet, onUpdate, deleteMode = false, checked = false, onCheck }: MusterSheetCardProps) => {
   const { toast } = useToast();
   const { user }   = useAuth();
   const attendanceUrl = `${window.location.origin}/attend/${sheet.id}`;
@@ -105,7 +107,17 @@ export const MusterSheetCard = ({ sheet, onUpdate }: MusterSheetCardProps) => {
   };
 
   return (
-    <Card className="bg-gray-800 border-gray-700 hover:border-gray-600 transition-colors">
+    <Card className="bg-gray-800 border-gray-700 hover:border-gray-600 transition-colors relative">
+      {deleteMode && (
+        <div className="absolute top-3 left-3 z-10">
+          <input
+            type="checkbox"
+            checked={checked}
+            onChange={e => onCheck && onCheck(e.target.checked)}
+            className="w-5 h-5 accent-red-600"
+          />
+        </div>
+      )}
       <CardHeader className="pb-3">
         <div className="flex justify-between items-start">
           <div className="flex-1">
