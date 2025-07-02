@@ -257,6 +257,7 @@ export const AuthForm = () => {
                 Continue with GitHub
               </Button>
 
+              {/* Guest button temporarily hidden - will be restored when guest accounts are ready
               <Button
                 type="button"
                 onClick={() => setShowGuestInfo(true)}
@@ -265,6 +266,7 @@ export const AuthForm = () => {
                 <Users className="h-4 w-4 mr-2" />
                 Continue as Guest
               </Button>
+              */}
             </div>
           </div>
 
