@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -9,6 +8,7 @@ import { Plus, Users, Clock, QrCode, Info } from 'lucide-react';
 import { CreateSheetModal } from './CreateSheetModal';
 import { MusterSheetCard } from './MusterSheetCard';
 import type { Tables } from '@/integrations/supabase/types';
+import { Checkbox } from '@/components/ui/checkbox';
 
 // Corrected table type to match database schema
 type MusterSheet = Tables<'mustersheets'>;
@@ -18,6 +18,8 @@ export const Dashboard = () => {
   const [sheets, setSheets] = useState<MusterSheet[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [deleteMode, setDeleteMode] = useState(false);
+  const [selectedSheetIds, setSelectedSheetIds] = useState<string[]>([]);
 
   useEffect(() => {
     fetchSheets();
@@ -86,6 +88,27 @@ export const Dashboard = () => {
 
   const canCreateSheet = !isGuest || sheets.length === 0;
 
+  const handleSelectSheet = (id: string, checked: boolean) => {
+    setSelectedSheetIds((prev) =>
+      checked ? [...prev, id] : prev.filter((sid) => sid !== id)
+    );
+  };
+
+  const handleDeleteSheets = async () => {
+    if (selectedSheetIds.length === 0) return;
+    setLoading(true);
+    const { error } = await supabase
+      .from('mustersheets')
+      .delete()
+      .in('id', selectedSheetIds);
+    if (error) {
+      alert('Error deleting sheets: ' + error.message);
+    }
+    setSelectedSheetIds([]);
+    setDeleteMode(false);
+    fetchSheets();
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
@@ -120,15 +143,29 @@ export const Dashboard = () => {
                 }
               </p>
             </div>
-            {canCreateSheet && (
-              <Button
-                onClick={() => setShowCreateModal(true)}
-                className="bg-green-600 hover:bg-green-700 text-white"
-              >
-                <Plus className="h-5 w-5 mr-2" />
-                Create New Sheet
-              </Button>
-            )}
+            <div className="flex gap-2">
+              {canCreateSheet && (
+                <Button
+                  onClick={() => setShowCreateModal(true)}
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                >
+                  <Plus className="h-5 w-5 mr-2" />
+                  Create New Sheet
+                </Button>
+              )}
+              {sheets.length > 0 && (
+                <Button
+                  variant={deleteMode ? 'destructive' : 'outline'}
+                  onClick={() => {
+                    setDeleteMode((d) => !d);
+                    setSelectedSheetIds([]);
+                  }}
+                  className={deleteMode ? 'bg-red-700 text-white' : ''}
+                >
+                  {deleteMode ? 'Cancel Delete' : 'Delete Mode'}
+                </Button>
+              )}
+            </div>
           </div>
 
           {/* Stats Cards */}
@@ -201,15 +238,31 @@ export const Dashboard = () => {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {sheets.map((sheet) => (
-              <MusterSheetCard 
-                key={sheet.id} 
-                sheet={sheet} 
-                onUpdate={fetchSheets}
-              />
-            ))}
-          </div>
+          <>
+            {deleteMode && selectedSheetIds.length > 0 && (
+              <div className="mb-4 flex justify-end">
+                <Button
+                  variant="destructive"
+                  onClick={handleDeleteSheets}
+                  className="bg-red-700 text-white"
+                >
+                  Delete Selected ({selectedSheetIds.length})
+                </Button>
+              </div>
+            )}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {sheets.map((sheet) => (
+                <MusterSheetCard
+                  key={sheet.id}
+                  sheet={sheet}
+                  onUpdate={fetchSheets}
+                  deleteMode={deleteMode}
+                  checked={selectedSheetIds.includes(sheet.id)}
+                  onCheck={(checked: boolean) => handleSelectSheet(sheet.id, checked)}
+                />
+              ))}
+            </div>
+          </>
         )}
 
         <CreateSheetModal
