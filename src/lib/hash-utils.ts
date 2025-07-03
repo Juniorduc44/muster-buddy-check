@@ -3,6 +3,26 @@
  */
 
 /**
+ * Simple hash function fallback when crypto.subtle is not available
+ * @param str - String to hash
+ * @returns Simple hash string
+ */
+function simpleHash(str: string): string {
+  let hash = 0;
+  if (str.length === 0) return hash.toString();
+  
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  
+  // Convert to positive hex string and pad to 64 characters
+  const positiveHash = Math.abs(hash).toString(16);
+  return positiveHash.padEnd(64, '0').substring(0, 64);
+}
+
+/**
  * Generates a SHA256 hash for attendance verification
  * @param entryData - The attendance entry data
  * @returns A SHA256 hash string
@@ -39,16 +59,29 @@ export async function generateAttendanceHash(entryData: {
     salt: 'muster-sheets-attendance-2024'
   });
 
-  // Generate SHA256 hash
-  const encoder = new TextEncoder();
-  const data = encoder.encode(dataString);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  
-  // Convert to hex string
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-  
-  return hashHex;
+  // Try to use Web Crypto API first, fallback to simple hash
+  try {
+    if (typeof crypto !== 'undefined' && crypto.subtle && crypto.subtle.digest) {
+      // Generate SHA256 hash using Web Crypto API
+      const encoder = new TextEncoder();
+      const data = encoder.encode(dataString);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+      
+      // Convert to hex string
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+      
+      return hashHex;
+    } else {
+      // Fallback to simple hash function
+      console.warn('[HashUtils] Web Crypto API not available, using fallback hash');
+      return simpleHash(dataString);
+    }
+  } catch (error) {
+    // If Web Crypto API fails, use fallback
+    console.warn('[HashUtils] Web Crypto API failed, using fallback hash:', error);
+    return simpleHash(dataString);
+  }
 }
 
 /**

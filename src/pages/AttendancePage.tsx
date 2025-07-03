@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
-import { generateAttendanceHash, formatHashForDisplay } from '@/lib/hash-utils';
+import { formatHashForDisplay } from '@/lib/hash-utils';
 import QRCode from 'qrcode';
 
 // NOTE:
@@ -43,6 +43,24 @@ export const AttendancePage = () => {
   const [attendanceHash, setAttendanceHash] = useState<string>('');
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>('');
   const isDevMode = import.meta.env.MODE === 'development'; // Check for development mode
+
+  // Server-side hash generation using Supabase Edge Function
+  const generateHashServerSide = async (entryData: any) => {
+    const { data, error } = await supabase.functions.invoke('generate-hash', {
+      body: { entryData }
+    })
+    
+    if (error) {
+      console.error('[AttendancePage] Edge function error:', error)
+      throw new Error(`Hash generation failed: ${error.message}`)
+    }
+    
+    if (!data.success) {
+      throw new Error(`Hash generation failed: ${data.error || 'Unknown error'}`)
+    }
+    
+    return data.hash
+  }
 
   useEffect(() => {
     if (sheetId) {
@@ -205,8 +223,8 @@ export const AttendancePage = () => {
         if (insertData && insertData[0]) {
           const entry = insertData[0];
           
-          // Generate hash with the actual database record data
-          const hash = await generateAttendanceHash({
+          // Generate hash with the actual database record data using server-side function
+          const hash = await generateHashServerSide({
             id: entry.id,
             sheetId: entry.sheet_id,
             firstName: entry.first_name,
