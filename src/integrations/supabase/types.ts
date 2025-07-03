@@ -12,6 +12,7 @@ export type Database = {
       musterentries: {
         Row: {
           age: number | null
+          attendance_hash: string | null
           badge_number: string | null
           created_at: string
           email: string | null
@@ -26,6 +27,7 @@ export type Database = {
         }
         Insert: {
           age?: number | null
+          attendance_hash?: string | null
           badge_number?: string | null
           created_at?: string
           email?: string | null
@@ -40,6 +42,7 @@ export type Database = {
         }
         Update: {
           age?: number | null
+          attendance_hash?: string | null
           badge_number?: string | null
           created_at?: string
           email?: string | null

@@ -11,6 +11,7 @@ import { AttendancePage } from "./pages/AttendancePage";
 import { ResultsPage } from "./pages/ResultsPage";
 import { QRCodePage } from "./pages/QRCodePage";
 import { EditSheetPage } from "./pages/EditSheetPage";
+import { VerifyReceiptPage } from "./pages/VerifyReceiptPage";
 
 const queryClient = new QueryClient();
 
@@ -29,6 +30,8 @@ const App = () => (
             <Route path="/results/:sheetId" element={<ResultsPage />} />
             <Route path="/qr/:sheetId" element={<QRCodePage />} />
             <Route path="/edit/:sheetId" element={<EditSheetPage />} />
+            {/* Public verification page - no auth required */}
+            <Route path="/verify" element={<VerifyReceiptPage />} />
             {/* Catch-all 404 route */}
             <Route path="*" element={<NotFound />} />
           </Routes>

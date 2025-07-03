@@ -1,7 +1,7 @@
 import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Shield, LogOut, ExternalLink, Heart, User } from 'lucide-react';
+import { Shield, LogOut, ExternalLink, Heart, User, Search } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Menu } from 'lucide-react';
@@ -60,6 +60,13 @@ export const Header = () => {
                     </Button>
                   )}
                   <a
+                    href="/verify"
+                    className="flex items-center space-x-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-md transition-colors w-full justify-center"
+                  >
+                    <Search className="h-4 w-4" />
+                    <span>Verify Receipt</span>
+                  </a>
+                  <a
                     href="https://pay.zaprite.com/pl_iT3k7W4JRo"
                     target="_blank"
                     rel="noopener noreferrer"
@@ -114,6 +121,13 @@ export const Header = () => {
                 Sign In / Sign Up
               </Button>
             )}
+            <a
+              href="/verify"
+              className="flex items-center space-x-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-md transition-colors"
+            >
+              <Search className="h-4 w-4" />
+              <span>Verify Receipt</span>
+            </a>
             <a
               href="https://pay.zaprite.com/pl_iT3k7W4JRo"
               target="_blank"

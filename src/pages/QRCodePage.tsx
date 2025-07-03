@@ -1,18 +1,20 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+
 import { QrCode, Download, Copy, ExternalLink } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 import type { Tables } from '@/integrations/supabase/types';
 
-type MusterSheet = Pick<Tables<'mustersheets'>, 'id' | 'title' | 'description'>;
+type MusterSheet = Pick<Tables<'mustersheets'>, 'id' | 'title' | 'description' | 'creator_id'>;
 
 export const QRCodePage = () => {
   const { sheetId } = useParams();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [sheet, setSheet] = useState<MusterSheet | null>(null);
   const [loading, setLoading] = useState(true);
   const [qrCodeUrl, setQrCodeUrl] = useState('');
@@ -45,7 +47,7 @@ export const QRCodePage = () => {
       });
       const { data, error } = await supabase
         .from('mustersheets')
-        .select('id, title, description, is_active, expires_at')
+        .select('id, title, description, is_active, expires_at, creator_id')
         // using match ensures exact equality without type confusion
         .match({ id: sheetId })
         .single();
@@ -129,6 +131,8 @@ export const QRCodePage = () => {
     link.click();
     document.body.removeChild(link);
   };
+
+  const isCreator = user && sheet && sheet.creator_id === user.id;
 
   if (loading) {
     return (
@@ -216,14 +220,15 @@ export const QRCodePage = () => {
                   Download QR Code
                 </Button>
                 
-                <Button
-                  onClick={() => window.open(attendanceUrl, '_blank')}
-                  variant="outline"
-                  className="border-gray-600 text-gray-300 hover:bg-gray-700"
-                >
-                  <ExternalLink className="h-4 w-4 mr-2" />
-                  Test Page
-                </Button>
+                {isCreator && (
+                  <Button
+                    onClick={() => window.open(attendanceUrl, '_blank')}
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    Add Signee
+                  </Button>
+                )}
               </div>
             </div>
 
@@ -236,7 +241,7 @@ export const QRCodePage = () => {
                 <li>• All responses are recorded in real-time</li>
                 <li className="pt-2 text-yellow-300">
                   Note: The sheet must have public access enabled. If scanning shows
-                  “Sheet Not Found”, apply the RLS policies
+                  "Sheet Not Found", apply the RLS policies
                   (<code className="bg-gray-600 px-1 rounded">npm run apply-rls</code>).
                 </li>
               </ul>

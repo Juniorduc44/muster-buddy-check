@@ -14,15 +14,20 @@ import {
   AlertCircle,
   Calendar,
   Bug,
+  Copy,
 } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
+import { generateAttendanceHash, formatHashForDisplay } from '@/lib/hash-utils';
+import QRCode from 'qrcode';
 
 // NOTE:
 // The table name is `mustersheets` (no underscore) and the attendance table is
 // `musterentries`. These names are consistent with the Supabase schema and RLS
 // policies.  Do not revert to the old `muster_sheets` / `attendance_records`
 // names, or the queries will fail.
+
+type MusterSheet = Tables<'mustersheets'>;
 
 export const AttendancePage = () => {
   const { sheetId } = useParams<{ sheetId: string }>();
@@ -35,6 +40,8 @@ export const AttendancePage = () => {
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [errorTitle, setErrorTitle] = useState<string>('Sheet Not Found');
+  const [attendanceHash, setAttendanceHash] = useState<string>('');
+  const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>('');
   const isDevMode = import.meta.env.MODE === 'development'; // Check for development mode
 
   useEffect(() => {
@@ -193,6 +200,55 @@ export const AttendancePage = () => {
         });
       } else {
         console.log('[AttendancePage] Attendance submitted successfully:', insertData);
+        
+        // Generate attendance hash with actual database ID
+        if (insertData && insertData[0]) {
+          const entry = insertData[0];
+          
+          // Generate hash with the actual database record data
+          const hash = await generateAttendanceHash({
+            id: entry.id,
+            sheetId: entry.sheet_id,
+            firstName: entry.first_name,
+            lastName: entry.last_name,
+            timestamp: entry.timestamp,
+            createdAt: entry.created_at,
+            email: entry.email || undefined,
+            phone: entry.phone || undefined,
+            rank: entry.rank || undefined,
+            badgeNumber: entry.badge_number || undefined,
+            unit: entry.unit || undefined,
+            age: entry.age || undefined,
+          });
+          
+          // Store the hash in the database
+          const { error: updateError } = await supabase
+            .from('musterentries')
+            .update({ attendance_hash: hash })
+            .eq('id', entry.id);
+          
+          if (updateError) {
+            console.error('[AttendancePage] Error updating hash:', updateError);
+          }
+          
+          setAttendanceHash(hash);
+          
+          // Generate QR code for the receipt
+          try {
+            const qrDataUrl = await QRCode.toDataURL(hash, {
+              width: 200,
+              margin: 2,
+              color: {
+                dark: '#10B981', // Green color
+                light: '#1F2937' // Dark background
+              }
+            });
+            setQrCodeDataUrl(qrDataUrl);
+          } catch (err) {
+            console.error('Error generating QR code:', err);
+          }
+        }
+        
         setSubmitted(true);
         toast({
           title: "Success!",
@@ -260,7 +316,7 @@ export const AttendancePage = () => {
           toast({
             title: "RLS Debug: Sheet Inactive",
             description: "Sheet is not active. Public view policy requires is_active = true.",
-            variant: "warning",
+            variant: "destructive",
           });
         }
         if (data.expires_at && new Date(data.expires_at) < new Date()) {
@@ -268,7 +324,7 @@ export const AttendancePage = () => {
           toast({
             title: "RLS Debug: Sheet Expired",
             description: "Sheet is expired. Public view policy requires not expired.",
-            variant: "warning",
+            variant: "destructive",
           });
         }
       }
@@ -359,10 +415,64 @@ export const AttendancePage = () => {
             <p className="text-gray-400 mb-4">
               Thank you for checking in to <strong className="text-white">{sheet.title}</strong>
             </p>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-gray-500 mb-6">
               Your attendance has been successfully recorded at{' '}
               {new Date().toLocaleString()}
             </p>
+            
+            {/* Attendance Hash Receipt */}
+            {attendanceHash && (
+              <div className="bg-gray-700 border border-gray-600 rounded-lg p-4 mb-4">
+                <h3 className="text-sm font-semibold text-white mb-2">Proof of Attendance Receipt</h3>
+                
+                {/* QR Code */}
+                {qrCodeDataUrl && (
+                  <div className="flex justify-center mb-4">
+                    <div className="bg-white p-2 rounded-lg">
+                      <img 
+                        src={qrCodeDataUrl} 
+                        alt="Attendance Receipt QR Code" 
+                        className="w-32 h-32"
+                      />
+                    </div>
+                  </div>
+                )}
+                
+                <div className="bg-gray-800 border border-gray-600 rounded p-3 mb-3">
+                  <p className="text-xs text-gray-400 mb-1">Attendance Receipt Code:</p>
+                  <p className="text-sm font-mono text-green-400 break-all">
+                    {formatHashForDisplay(attendanceHash)}
+                  </p>
+                </div>
+                
+                <div className="flex justify-center space-x-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      navigator.clipboard.writeText(attendanceHash);
+                      toast({
+                        title: "Receipt Copied!",
+                        description: "Attendance receipt copied to clipboard",
+                      });
+                    }}
+                    className="border-gray-600 text-gray-300 hover:bg-gray-700"
+                  >
+                    <Copy className="h-4 w-4 mr-2" />
+                    Copy Receipt
+                  </Button>
+                </div>
+                
+                <div className="text-center mt-3">
+                  <p className="text-xs text-gray-500 mb-2">
+                    📱 Screenshot or copy this receipt for verification
+                  </p>
+                  <p className="text-xs text-gray-400">
+                    Present this QR code or receipt code to verify your attendance
+                  </p>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

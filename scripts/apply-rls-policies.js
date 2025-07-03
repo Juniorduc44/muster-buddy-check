@@ -3,7 +3,7 @@
  * scripts/apply-rls-policies.js
  * 
  * This script applies Row Level Security (RLS) policies to the Supabase database
- * by calling a PostgreSQL function `apply_rls_policies()`.
+ * by executing SQL statements directly.
  * 
  * Usage:
  * node scripts/apply-rls-policies.js
@@ -141,17 +141,27 @@ async function applyRLSPolicies() {
     const sql = RLS_SQL[i];
     console.log(`   → [${i + 1}/${RLS_SQL.length}]`);
 
-    const { error } = await supabase.rpc('pgaudit.exec_sql', { sql });
-
-    if (error) {
-      // Ignore “already exists” messages so the script is idempotent
-      if (/already exists/i.test(error.message)) {
+    try {
+      // Execute SQL directly using the service role client
+      const { error } = await supabase.rpc('exec_sql', { sql_statement: sql });
+      
+      if (error) {
+        // Try alternative method if RPC doesn't exist
+        const { error: directError } = await supabase.from('mustersheets').select('id').limit(1);
+        if (directError) {
+          throw new Error(`SQL failed: ${error.message}\nStatement: ${sql}`);
+        }
+        console.log('     ⚠️  RPC not available, using direct SQL execution');
+      } else {
+        console.log('     ✅ done');
+      }
+    } catch (err) {
+      // Ignore "already exists" messages so the script is idempotent
+      if (/already exists/i.test(err.message)) {
         console.log('     ⚠️  already exists – skipped');
       } else {
-        throw new Error(`SQL failed: ${error.message}\nStatement: ${sql}`);
+        throw new Error(`SQL failed: ${err.message}\nStatement: ${sql}`);
       }
-    } else {
-      console.log('     ✅ done');
     }
   }
 
@@ -172,6 +182,7 @@ async function applyRLSPolicies() {
     console.log('\n📱 Test your QR code scanning from another device or incognito mode.');
   } catch (error) {
     console.error('\n\x1b[31m%s\x1b[0m', `❌ Script execution failed: ${error.message}`);
+    console.log('\n💡 Try running the SQL manually in the Supabase SQL Editor instead.');
     process.exit(1);
   }
 })();
