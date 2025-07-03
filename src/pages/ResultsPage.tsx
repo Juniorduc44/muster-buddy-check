@@ -17,9 +17,13 @@ import {
   Users, 
   Download, 
   Calendar, 
-  AlertCircle 
+  AlertCircle,
+  Copy,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
+import { formatHashForDisplay } from '@/lib/hash-utils';
 
 // Corrected table types to match Supabase schema
 type MusterSheet = Tables<'mustersheets'>;
@@ -32,6 +36,7 @@ export const ResultsPage = () => {
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [unauthorized, setUnauthorized] = useState(false);
+  const [showHashes, setShowHashes] = useState(false);
 
   useEffect(() => {
     fetchSheetAndRecords();
@@ -76,6 +81,8 @@ export const ResultsPage = () => {
       if (recordsError) {
         console.error('Error fetching records:', recordsError);
       } else {
+        console.log('[ResultsPage] Fetched records:', recordsData);
+        console.log('[ResultsPage] Sample record with hash:', recordsData?.[0]);
         setRecords(recordsData || []);
       }
     } catch (error) {
@@ -102,14 +109,15 @@ export const ResultsPage = () => {
   const exportToCSV = () => {
     if (!sheet || !records.length) return;
 
-    const headers = ['Name', ...sheet.required_fields.filter(f => f !== 'first_name' && f !== 'last_name'), 'Check-in Time'];
+    const headers = ['Name', ...sheet.required_fields.filter(f => f !== 'first_name' && f !== 'last_name'), 'Check-in Time', 'Receipt Code'];
     const csvData = records.map(record => {
       const row = [
         `${record.first_name} ${record.last_name}`,
         ...sheet.required_fields
           .filter(f => f !== 'first_name' && f !== 'last_name')
           .map(field => (record as any)[field] || ''),
-        formatDateTime(record.timestamp).date + ' ' + formatDateTime(record.timestamp).time
+        formatDateTime(record.timestamp).date + ' ' + formatDateTime(record.timestamp).time,
+        record.attendance_hash || ''
       ];
       return row.join(',');
     });
@@ -198,10 +206,21 @@ export const ResultsPage = () => {
 
         <Card className="bg-gray-800 border-gray-700">
           <CardHeader>
-            <CardTitle className="text-white flex items-center">
-              <Users className="h-5 w-5 mr-2" />
-              Attendance Records
-            </CardTitle>
+            <div className="flex justify-between items-center">
+              <CardTitle className="text-white flex items-center">
+                <Users className="h-5 w-5 mr-2" />
+                Attendance Records
+              </CardTitle>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowHashes(!showHashes)}
+                className="border-gray-600 text-gray-300 hover:bg-gray-700"
+              >
+                {showHashes ? <EyeOff className="h-4 w-4 mr-2" /> : <Eye className="h-4 w-4 mr-2" />}
+                {showHashes ? 'Hide' : 'Show'} Attendance Hashes
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             {records.length === 0 ? (
@@ -224,6 +243,9 @@ export const ResultsPage = () => {
                           </TableHead>
                         ))}
                       <TableHead className="text-gray-300">Check-in Time</TableHead>
+                      {showHashes && (
+                        <TableHead className="text-gray-300">Receipt</TableHead>
+                      )}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -247,6 +269,31 @@ export const ResultsPage = () => {
                               <span className="text-sm text-gray-400">{dateTime.time}</span>
                             </div>
                           </TableCell>
+                          {showHashes && (
+                            <TableCell className="text-gray-300">
+                              {record.attendance_hash ? (
+                                <div className="flex items-center space-x-2">
+                                  <span className="text-xs font-mono text-green-400 max-w-32 truncate">
+                                    {formatHashForDisplay(record.attendance_hash)}
+                                  </span>
+                                                                      <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => {
+                                        navigator.clipboard.writeText(record.attendance_hash!);
+                                        // You could add a toast notification here if you have useToast
+                                      }}
+                                      className="h-6 w-6 p-0 text-gray-400 hover:text-white"
+                                      title="Copy Receipt"
+                                    >
+                                      <Copy className="h-3 w-3" />
+                                    </Button>
+                                </div>
+                              ) : (
+                                <span className="text-gray-500 text-xs">No hash</span>
+                              )}
+                            </TableCell>
+                          )}
                         </TableRow>
                       );
                     })}

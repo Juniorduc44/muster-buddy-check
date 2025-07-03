@@ -143,11 +143,11 @@ export const Dashboard = () => {
                 }
               </p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row sm:gap-2 gap-2 w-full sm:w-auto mt-4 sm:mt-0">
               {canCreateSheet && (
                 <Button
                   onClick={() => setShowCreateModal(true)}
-                  className="bg-green-600 hover:bg-green-700 text-white"
+                  className="bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto"
                 >
                   <Plus className="h-5 w-5 mr-2" />
                   Create New Sheet
@@ -160,7 +160,7 @@ export const Dashboard = () => {
                     setDeleteMode((d) => !d);
                     setSelectedSheetIds([]);
                   }}
-                  className={deleteMode ? 'bg-red-700 text-white' : ''}
+                  className={`${deleteMode ? 'bg-red-700 text-white' : ''} w-full sm:w-auto`}
                 >
                   {deleteMode ? 'Cancel Delete' : 'Delete Mode'}
                 </Button>
