@@ -112,12 +112,17 @@ export async function verifyAttendanceHash(
 }
 
 /**
- * Formats a hash for display (adds spaces every 8 characters for readability)
+ * Formats a hash for display (shows first 8 and last 8 characters with ellipsis)
  * @param hash - The hash string
  * @returns Formatted hash string
  */
 export function formatHashForDisplay(hash: string): string {
-  return hash.match(/.{1,8}/g)?.join(' ') || hash;
+  if (!hash || hash.length < 16) {
+    return hash;
+  }
+  const first8 = hash.substring(0, 8);
+  const last8 = hash.substring(hash.length - 8);
+  return `${first8}...${last8}`;
 }
 
 /**
