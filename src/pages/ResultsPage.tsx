@@ -279,9 +279,32 @@ export const ResultsPage = () => {
                                                                       <Button
                                       variant="ghost"
                                       size="sm"
-                                      onClick={() => {
-                                        navigator.clipboard.writeText(record.attendance_hash!);
-                                        // You could add a toast notification here if you have useToast
+                                      onClick={async () => {
+                                        try {
+                                          // Try modern clipboard API first
+                                          if (navigator.clipboard && window.isSecureContext) {
+                                            await navigator.clipboard.writeText(record.attendance_hash!);
+                                          } else {
+                                            // Fallback for older browsers or non-secure contexts
+                                            const textArea = document.createElement('textarea');
+                                            textArea.value = record.attendance_hash!;
+                                            textArea.style.position = 'fixed';
+                                            textArea.style.left = '-999999px';
+                                            textArea.style.top = '-999999px';
+                                            document.body.appendChild(textArea);
+                                            textArea.focus();
+                                            textArea.select();
+                                            
+                                            const successful = document.execCommand('copy');
+                                            document.body.removeChild(textArea);
+                                            
+                                            if (!successful) {
+                                              throw new Error('execCommand copy failed');
+                                            }
+                                          }
+                                        } catch (error) {
+                                          console.error('Failed to copy to clipboard:', error);
+                                        }
                                       }}
                                       className="h-6 w-6 p-0 text-gray-400 hover:text-white"
                                       title="Copy Receipt"

@@ -467,12 +467,46 @@ export const AttendancePage = () => {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => {
-                      navigator.clipboard.writeText(attendanceHash);
-                      toast({
-                        title: "Receipt Copied!",
-                        description: "Attendance receipt copied to clipboard",
-                      });
+                    onClick={async () => {
+                      try {
+                        // Try modern clipboard API first
+                        if (navigator.clipboard && window.isSecureContext) {
+                          await navigator.clipboard.writeText(attendanceHash);
+                          toast({
+                            title: "Receipt Copied!",
+                            description: "Attendance receipt copied to clipboard",
+                          });
+                        } else {
+                          // Fallback for older browsers or non-secure contexts
+                          const textArea = document.createElement('textarea');
+                          textArea.value = attendanceHash;
+                          textArea.style.position = 'fixed';
+                          textArea.style.left = '-999999px';
+                          textArea.style.top = '-999999px';
+                          document.body.appendChild(textArea);
+                          textArea.focus();
+                          textArea.select();
+                          
+                          const successful = document.execCommand('copy');
+                          document.body.removeChild(textArea);
+                          
+                          if (successful) {
+                            toast({
+                              title: "Receipt Copied!",
+                              description: "Attendance receipt copied to clipboard",
+                            });
+                          } else {
+                            throw new Error('execCommand copy failed');
+                          }
+                        }
+                      } catch (error) {
+                        console.error('Failed to copy to clipboard:', error);
+                        toast({
+                          title: "Copy Failed",
+                          description: "Failed to copy receipt to clipboard. Please copy manually.",
+                          variant: "destructive",
+                        });
+                      }
                     }}
                     className="border-gray-600 text-gray-300 hover:bg-gray-700"
                   >
