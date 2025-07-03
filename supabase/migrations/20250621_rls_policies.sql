@@ -35,7 +35,20 @@ CREATE POLICY "Allow QR code sign-ins"
     )
   );
 
--- POLICY 4: Owners (sheet creators) can view all entries for their sheets
+-- POLICY 4: Allow anonymous users to update their own attendance records (for hash generation)
+-- This allows anonymous attendees to update their own records to add the attendance hash
+CREATE POLICY "Allow anonymous hash updates"
+  ON public.musterentries
+  FOR UPDATE TO anon
+  USING (true)  -- Allow update on any record (since anonymous users don't have user_id)
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.mustersheets
+      WHERE id = sheet_id
+    )
+  );
+
+-- POLICY 5: Owners (sheet creators) can view all entries for their sheets
 CREATE POLICY "Owners can view entries"
   ON public.musterentries
   FOR SELECT
@@ -47,7 +60,7 @@ CREATE POLICY "Owners can view entries"
     )
   );
 
--- POLICY 5: Authenticated attendees can view only their own entry
+-- POLICY 6: Authenticated attendees can view only their own entry
 CREATE POLICY "Attendees see only their entry"
   ON public.musterentries
   FOR SELECT

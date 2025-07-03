@@ -75,6 +75,20 @@ const RLS_SQL = [
        )
      );`,
 
+  `CREATE POLICY IF NOT EXISTS "Allow anonymous hash updates"
+     ON public.musterentries
+     FOR UPDATE
+     TO anon
+     USING (true)
+     WITH CHECK (
+       EXISTS (
+         SELECT 1 FROM public.mustersheets
+         WHERE id = sheet_id
+           AND is_active = true
+           AND (expires_at IS NULL OR expires_at > now())
+       )
+     );`,
+
   `CREATE POLICY IF NOT EXISTS "Owners can view entries"
      ON public.musterentries
      FOR SELECT

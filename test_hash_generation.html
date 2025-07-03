@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hash Generation Test</title>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <h1>Hash Generation Test</h1>
+    <button onclick="testHashGeneration()">Test Hash Generation</button>
+    <div id="result"></div>
+
+    <script>
+        const SUPABASE_URL = "https://ypvoijfxlfxiyoekxgzx.supabase.co";
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlwdm9pamZ4bGZ4aXlvZWt4Z3p4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAyODkyMzIsImV4cCI6MjA2NTg2NTIzMn0.5ioNwuv2hyWXeIctDu0pljA8eBYf4eKpUwepu7SOSro";
+        
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        async function testHashGeneration() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '<p>Testing...</p>';
+
+            try {
+                // Step 1: Test edge function
+                console.log('Testing edge function...');
+                const { data: hashData, error: hashError } = await supabase.functions.invoke('generate-hash', {
+                    body: {
+                        entryData: {
+                            id: 'test-' + Date.now(),
+                            sheetId: '66e3cd12-6fa3-4997-839e-37c347881dc7', // Your test sheet ID
+                            firstName: 'Test',
+                            lastName: 'User',
+                            timestamp: new Date().toISOString(),
+                            createdAt: new Date().toISOString()
+                        }
+                    }
+                });
+
+                if (hashError) {
+                    throw new Error(`Hash generation failed: ${hashError.message}`);
+                }
+
+                console.log('Hash generated:', hashData);
+                resultDiv.innerHTML += `<p>✅ Hash generated: ${hashData.hash}</p>`;
+
+                // Step 2: Test database INSERT
+                console.log('Testing database INSERT...');
+                const testRecord = {
+                    sheet_id: '66e3cd12-6fa3-4997-839e-37c347881dc7',
+                    first_name: 'Test',
+                    last_name: 'User',
+                    timestamp: new Date().toISOString(),
+                    age: 25
+                };
+
+                const { data: insertData, error: insertError } = await supabase
+                    .from('musterentries')
+                    .insert([testRecord])
+                    .select();
+
+                if (insertError) {
+                    throw new Error(`INSERT failed: ${insertError.message}`);
+                }
+
+                console.log('Record inserted:', insertData);
+                resultDiv.innerHTML += `<p>✅ Record inserted with ID: ${insertData[0].id}</p>`;
+
+                // Step 3: Test database UPDATE
+                console.log('Testing database UPDATE...');
+                const { error: updateError } = await supabase
+                    .from('musterentries')
+                    .update({ attendance_hash: hashData.hash })
+                    .eq('id', insertData[0].id);
+
+                if (updateError) {
+                    throw new Error(`UPDATE failed: ${updateError.message}`);
+                }
+
+                console.log('Hash updated successfully');
+                resultDiv.innerHTML += `<p>✅ Hash updated in database</p>`;
+
+                // Step 4: Verify the update
+                console.log('Verifying update...');
+                const { data: verifyData, error: verifyError } = await supabase
+                    .from('musterentries')
+                    .select('attendance_hash')
+                    .eq('id', insertData[0].id)
+                    .single();
+
+                if (verifyError) {
+                    throw new Error(`Verification failed: ${verifyError.message}`);
+                }
+
+                console.log('Verification result:', verifyData);
+                resultDiv.innerHTML += `<p>✅ Verification: Hash in DB = ${verifyData.attendance_hash}</p>`;
+
+                resultDiv.innerHTML += `<p style="color: green; font-weight: bold;">🎉 All tests passed!</p>`;
+
+            } catch (error) {
+                console.error('Test failed:', error);
+                resultDiv.innerHTML += `<p style="color: red; font-weight: bold;">❌ Test failed: ${error.message}</p>`;
+            }
+        }
+    </script>
+</body>
+</html> 

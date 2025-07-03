@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
-import { generateAttendanceHash, formatHashForDisplay } from '@/lib/hash-utils';
+import { formatHashForDisplay } from '@/lib/hash-utils';
 import QRCode from 'qrcode';
 
 // NOTE:
@@ -43,6 +43,24 @@ export const AttendancePage = () => {
   const [attendanceHash, setAttendanceHash] = useState<string>('');
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>('');
   const isDevMode = import.meta.env.MODE === 'development'; // Check for development mode
+
+  // Server-side hash generation using Supabase Edge Function
+  const generateHashServerSide = async (entryData: any) => {
+    const { data, error } = await supabase.functions.invoke('generate-hash', {
+      body: { entryData }
+    })
+    
+    if (error) {
+      console.error('[AttendancePage] Edge function error:', error)
+      throw new Error(`Hash generation failed: ${error.message}`)
+    }
+    
+    if (!data.success) {
+      throw new Error(`Hash generation failed: ${data.error || 'Unknown error'}`)
+    }
+    
+    return data.hash
+  }
 
   useEffect(() => {
     if (sheetId) {
@@ -205,8 +223,8 @@ export const AttendancePage = () => {
         if (insertData && insertData[0]) {
           const entry = insertData[0];
           
-          // Generate hash with the actual database record data
-          const hash = await generateAttendanceHash({
+          // Generate hash with the actual database record data using server-side function
+          const hash = await generateHashServerSide({
             id: entry.id,
             sheetId: entry.sheet_id,
             firstName: entry.first_name,
@@ -449,12 +467,46 @@ export const AttendancePage = () => {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => {
-                      navigator.clipboard.writeText(attendanceHash);
-                      toast({
-                        title: "Receipt Copied!",
-                        description: "Attendance receipt copied to clipboard",
-                      });
+                    onClick={async () => {
+                      try {
+                        // Try modern clipboard API first
+                        if (navigator.clipboard && window.isSecureContext) {
+                          await navigator.clipboard.writeText(attendanceHash);
+                          toast({
+                            title: "Receipt Copied!",
+                            description: "Attendance receipt copied to clipboard",
+                          });
+                        } else {
+                          // Fallback for older browsers or non-secure contexts
+                          const textArea = document.createElement('textarea');
+                          textArea.value = attendanceHash;
+                          textArea.style.position = 'fixed';
+                          textArea.style.left = '-999999px';
+                          textArea.style.top = '-999999px';
+                          document.body.appendChild(textArea);
+                          textArea.focus();
+                          textArea.select();
+                          
+                          const successful = document.execCommand('copy');
+                          document.body.removeChild(textArea);
+                          
+                          if (successful) {
+                            toast({
+                              title: "Receipt Copied!",
+                              description: "Attendance receipt copied to clipboard",
+                            });
+                          } else {
+                            throw new Error('execCommand copy failed');
+                          }
+                        }
+                      } catch (error) {
+                        console.error('Failed to copy to clipboard:', error);
+                        toast({
+                          title: "Copy Failed",
+                          description: "Failed to copy receipt to clipboard. Please copy manually.",
+                          variant: "destructive",
+                        });
+                      }
                     }}
                     className="border-gray-600 text-gray-300 hover:bg-gray-700"
                   >
