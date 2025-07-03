@@ -273,7 +273,7 @@ export const ResultsPage = () => {
                             <TableCell className="text-gray-300">
                               {record.attendance_hash ? (
                                 <div className="flex items-center space-x-2">
-                                  <span className="text-xs font-mono text-green-400 max-w-32 truncate">
+                                  <span className="text-xs font-mono text-green-400">
                                     {formatHashForDisplay(record.attendance_hash)}
                                   </span>
                                                                       <Button
