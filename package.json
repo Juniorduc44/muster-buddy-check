@@ -10,8 +10,9 @@
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",
-    "predeploy": "npm run build",
+    "predeploy": "VITE_GITHUB_PAGES=true npm run build",
     "deploy": "gh-pages -d dist",
+    "start": "vite",
     "apply-rls": "node scripts/apply-rls-policies.js"
   },
   "dependencies": {
