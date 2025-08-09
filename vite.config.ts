@@ -5,8 +5,18 @@ import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
-  // Set base dynamically: '/muster-buddy-check/' for GitHub Pages, '/' for Netlify and local
-  const base = mode === "production" ? "/muster-buddy-check/" : "/";
+  // Determine base path based on environment
+  let base = "/";
+  
+  if (mode === "production") {
+    // Check if we're building for GitHub Pages specifically
+    // You can set this via environment variable: VITE_DEPLOY_TARGET=github
+    const deployTarget = process.env.VITE_DEPLOY_TARGET;
+    if (deployTarget === "github") {
+      base = "/muster-buddy-check/";
+    }
+    // Otherwise use "/" for Netlify and other deployments
+  }
 
   return {
     server: {
