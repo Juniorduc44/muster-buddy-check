@@ -1,4 +1,5 @@
 {
+  "homepage": "https://juniorduc44.github.io/muster-buddy-check",
   "name": "MusterSheets",
   "private": true,
   "version": "4.0.0",
@@ -9,7 +10,6 @@
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",
-    "homepage": "https://juniorduc44.github.io/muster-buddy-check",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist",
     "apply-rls": "node scripts/apply-rls-policies.js"
