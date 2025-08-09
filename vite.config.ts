@@ -5,7 +5,7 @@ import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
-  // Set base dynamically based on the environment
+  // Set base dynamically: '/muster-buddy-check/' for GitHub Pages, '/' for Netlify and local
   const base = mode === "production" ? "/muster-buddy-check/" : "/";
 
   return {
@@ -22,9 +22,6 @@ export default defineConfig(({ mode }) => {
         "@": path.resolve(__dirname, "./src"),
       },
     },
-    base, // Add base configuration
-    build: {
-      outDir: "docs", // Specify the output directory as 'docs'
-    },
+    base, // Set the base path
   };
 });
