@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { safeStorageGet, safeStorageRemove, safeStorageSet } from '@/lib/storage';
 
 interface AuthContextType {
   user: User | null;
@@ -34,7 +35,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     // Check if user is in guest mode
-    const guestMode = localStorage.getItem('guest_mode');
+    const guestMode = safeStorageGet('guest_mode');
     if (guestMode === 'true') {
       setIsGuest(true);
       setLoading(false);
@@ -107,24 +108,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const signOut = async () => {
-    localStorage.removeItem('guest_mode');
-    localStorage.removeItem('guest_sheet_id');
+    safeStorageRemove('guest_mode');
+    safeStorageRemove('guest_sheet_id');
     // Ensure onboarding modal does NOT show right after sign-out
     // (only show for brand-new visitors hitting the root domain)
-    localStorage.setItem('onboarding_seen', 'true');
+    safeStorageSet('onboarding_seen', 'true');
     setIsGuest(false);
     const { error } = await supabase.auth.signOut();
     return { error };
   };
 
   const setGuestMode = () => {
-    localStorage.setItem('guest_mode', 'true');
+    safeStorageSet('guest_mode', 'true');
     setIsGuest(true);
     setLoading(false);
   };
 
   const convertGuestToUser = async (userId: string) => {
-    const guestSheetId = localStorage.getItem('guest_sheet_id');
+    const guestSheetId = safeStorageGet('guest_sheet_id');
     if (guestSheetId) {
       try {
         // Update the guest sheet to belong to the new user
@@ -134,8 +135,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           .eq('id', guestSheetId);
         
         if (!error) {
-          localStorage.removeItem('guest_sheet_id');
-          localStorage.removeItem('guest_mode');
+          safeStorageRemove('guest_sheet_id');
+          safeStorageRemove('guest_mode');
           setIsGuest(false);
         }
       } catch (error) {

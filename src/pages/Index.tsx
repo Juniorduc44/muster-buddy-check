@@ -5,17 +5,18 @@ import { AuthForm } from '@/components/AuthForm';
 import { Header } from '@/components/Header';
 import { Dashboard } from '@/components/Dashboard';
 import { OnboardingModal } from '@/components/OnboardingModal';
+import { safeStorageGet } from '@/lib/storage';
 
 const Index = () => {
   const { user, loading, isGuest, convertGuestToUser } = useAuth();
   // Show onboarding unless the user has explicitly opted-out
   const [showOnboarding, setShowOnboarding] = useState(
-    () => !localStorage.getItem('onboarding_seen')
+    () => !safeStorageGet('onboarding_seen')
   );
 
   useEffect(() => {
     // If user just signed in and was previously a guest, convert their data
-    if (user && !isGuest && localStorage.getItem('guest_sheet_id')) {
+    if (user && !isGuest && safeStorageGet('guest_sheet_id')) {
       convertGuestToUser(user.id);
     }
   }, [user, isGuest, convertGuestToUser]);

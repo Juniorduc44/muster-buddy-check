@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { X, ArrowLeft, ArrowRight } from 'lucide-react';
 import musterLogo from '@/assets/images/musterSheets_logo.png';
+import { safeStorageSet } from '@/lib/storage';
 
 interface OnboardingModalProps {
   isOpen: boolean;
@@ -27,7 +28,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
 
   const handleClose = () => {
     if (dontShowAgain) {
-      localStorage.setItem('onboarding_seen', 'true');
+      safeStorageSet('onboarding_seen', 'true');
     }
     setCurrentStep(0); // Reset to first step on close
     onClose();

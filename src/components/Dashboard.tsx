@@ -9,6 +9,7 @@ import { CreateSheetModal } from './CreateSheetModal';
 import { MusterSheetCard } from './MusterSheetCard';
 import type { Tables } from '@/integrations/supabase/types';
 import { Checkbox } from '@/components/ui/checkbox';
+import { safeStorageGet, safeStorageSet } from '@/lib/storage';
 
 // Corrected table type to match database schema
 type MusterSheet = Tables<'mustersheets'>;
@@ -28,7 +29,7 @@ export const Dashboard = () => {
   const fetchSheets = async () => {
     if (isGuest) {
       // For guest users, check if they have a sheet in localStorage
-      const guestSheetId = localStorage.getItem('guest_sheet_id');
+      const guestSheetId = safeStorageGet('guest_sheet_id');
       if (guestSheetId) {
         try {
           const { data, error } = await supabase
@@ -73,7 +74,7 @@ export const Dashboard = () => {
   const handleSheetCreated = (newSheet?: MusterSheet) => {
     if (isGuest && newSheet) {
       // Store the guest sheet ID for later conversion
-      localStorage.setItem('guest_sheet_id', newSheet.id);
+      safeStorageSet('guest_sheet_id', newSheet.id);
     }
     fetchSheets();
     setShowCreateModal(false);
