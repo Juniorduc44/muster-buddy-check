@@ -130,7 +130,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       try {
         // Update the guest sheet to belong to the new user
         const { error } = await supabase
-          .from('muster_sheets')
+          .from('mustersheets')
           .update({ creator_id: userId })
           .eq('id', guestSheetId);
         

@@ -10,6 +10,9 @@ ALTER TABLE public.mustersheets ENABLE ROW LEVEL SECURITY;
 -- Enable Row Level Security on musterentries table
 ALTER TABLE public.musterentries ENABLE ROW LEVEL SECURITY;
 
+-- Remove any older policy that allowed anonymous users to read attendance rows.
+DROP POLICY IF EXISTS "Public can view entries for active sheets" ON public.musterentries;
+
 -- POLICY 1: Allow public read access to active mustersheets (needed for attendance page)
 -- This allows anyone to view active, non-expired mustersheets without authentication
 CREATE POLICY "Public can view active muster sheets"

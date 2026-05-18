@@ -17,22 +17,22 @@ import {
   Clock,
   Copy
 } from 'lucide-react';
-import { verifyAttendanceHash, isValidHashFormat, formatHashForDisplay } from '@/lib/hash-utils';
-import type { Tables } from '@/integrations/supabase/types';
+import { isValidHashFormat, formatHashForDisplay } from '@/lib/hash-utils';
 
-type AttendanceRecord = Tables<'musterentries'>;
-type MusterSheet = Tables<'mustersheets'>;
+type VerificationResult = {
+  isValid: boolean;
+  sheetTitle?: string;
+  checkedInAt?: string;
+  attendeeNameMasked?: string;
+  error?: string;
+};
 
 export const VerifyReceiptPage = () => {
   const { toast } = useToast();
   const [receiptHash, setReceiptHash] = useState('');
   const [verifying, setVerifying] = useState(false);
-  const [verificationResult, setVerificationResult] = useState<{
-    isValid: boolean;
-    record?: AttendanceRecord;
-    sheet?: MusterSheet;
-    error?: string;
-  } | null>(null);
+  const [verificationResult, setVerificationResult] = useState<VerificationResult | null>(null);
+  const displayHash = receiptHash.replace(/\s/g, '');
 
   const handleVerify = async () => {
     if (!receiptHash.trim()) {
@@ -60,58 +60,27 @@ export const VerifyReceiptPage = () => {
     setVerificationResult(null);
 
     try {
-      // Find the attendance record by hash
-      const { data: record, error: recordError } = await supabase
-        .from('musterentries')
-        .select('*')
-        .eq('attendance_hash', cleanHash)
-        .single();
+      const { data, error } = await supabase.functions.invoke<VerificationResult>('verify-receipt', {
+        body: { receiptHash: cleanHash }
+      });
 
-      if (recordError || !record) {
+      if (error) {
         setVerificationResult({
           isValid: false,
-          error: 'Receipt not found in our records'
+          error: error.message || 'Receipt verification failed'
         });
         return;
       }
 
-      // Fetch the associated sheet
-      const { data: sheet, error: sheetError } = await supabase
-        .from('mustersheets')
-        .select('*')
-        .eq('id', record.sheet_id)
-        .single();
-
-      if (sheetError || !sheet) {
+      if (!data) {
         setVerificationResult({
           isValid: false,
-          error: 'Associated event not found'
+          error: 'Verification returned no result'
         });
         return;
       }
 
-      // Verify the hash matches the record data
-      const isValid = await verifyAttendanceHash(cleanHash, {
-        id: record.id,
-        sheetId: record.sheet_id,
-        firstName: record.first_name,
-        lastName: record.last_name,
-        timestamp: record.timestamp,
-        createdAt: record.created_at,
-        email: record.email || undefined,
-        phone: record.phone || undefined,
-        rank: record.rank || undefined,
-        badgeNumber: record.badge_number || undefined,
-        unit: record.unit || undefined,
-        age: record.age || undefined,
-      });
-
-      setVerificationResult({
-        isValid,
-        record,
-        sheet,
-        error: isValid ? undefined : 'Receipt verification failed'
-      });
+      setVerificationResult(data);
 
     } catch (error) {
       console.error('Verification error:', error);
@@ -210,8 +179,8 @@ export const VerifyReceiptPage = () => {
 
             {/* Verification Result */}
             {verificationResult && (
-              <div className="mt-6 pt-4 border-t border-gray-700">
-                {verificationResult.isValid && verificationResult.record && verificationResult.sheet ? (
+                <div className="mt-6 pt-4 border-t border-gray-700">
+                {verificationResult.isValid ? (
                   <div className="bg-green-900/20 border border-green-800 rounded-lg p-4">
                     <div className="flex items-center mb-3">
                       <CheckCircle className="h-5 w-5 text-green-400 mr-2" />
@@ -222,35 +191,23 @@ export const VerifyReceiptPage = () => {
                       <div className="flex items-center space-x-2">
                         <User className="h-4 w-4 text-gray-400" />
                         <span className="text-white font-medium">
-                          {verificationResult.record.first_name} {verificationResult.record.last_name}
+                          {verificationResult.attendeeNameMasked || 'Verified attendee'}
                         </span>
                       </div>
                       
                       <div className="flex items-center space-x-2">
                         <Calendar className="h-4 w-4 text-gray-400" />
                         <span className="text-gray-300">
-                          {verificationResult.sheet.title}
+                          {verificationResult.sheetTitle || 'Verified event'}
                         </span>
                       </div>
                       
-                      <div className="flex items-center space-x-2">
-                        <Clock className="h-4 w-4 text-gray-400" />
-                        <span className="text-gray-300">
-                          Checked in: {formatDateTime(verificationResult.record.timestamp).date} at {formatDateTime(verificationResult.record.timestamp).time}
-                        </span>
-                      </div>
-
-                      {verificationResult.record.email && (
+                      {verificationResult.checkedInAt && (
                         <div className="flex items-center space-x-2">
-                          <span className="text-gray-400">📧</span>
-                          <span className="text-gray-300">{verificationResult.record.email}</span>
-                        </div>
-                      )}
-
-                      {verificationResult.record.rank && (
-                        <div className="flex items-center space-x-2">
-                          <span className="text-gray-400">⭐</span>
-                          <span className="text-gray-300">{verificationResult.record.rank}</span>
+                          <Clock className="h-4 w-4 text-gray-400" />
+                          <span className="text-gray-300">
+                            Checked in: {formatDateTime(verificationResult.checkedInAt).date} at {formatDateTime(verificationResult.checkedInAt).time}
+                          </span>
                         </div>
                       )}
 
@@ -264,7 +221,7 @@ export const VerifyReceiptPage = () => {
                               try {
                                 // Try modern clipboard API first
                                 if (navigator.clipboard && window.isSecureContext) {
-                                  await navigator.clipboard.writeText(verificationResult.record!.attendance_hash!);
+                                  await navigator.clipboard.writeText(displayHash);
                                   toast({
                                     title: "Receipt Copied!",
                                     description: "Receipt code copied to clipboard",
@@ -272,7 +229,7 @@ export const VerifyReceiptPage = () => {
                                 } else {
                                   // Fallback for older browsers or non-secure contexts
                                   const textArea = document.createElement('textarea');
-                                  textArea.value = verificationResult.record!.attendance_hash!;
+                                  textArea.value = displayHash;
                                   textArea.style.position = 'fixed';
                                   textArea.style.left = '-999999px';
                                   textArea.style.top = '-999999px';
@@ -308,7 +265,7 @@ export const VerifyReceiptPage = () => {
                           </Button>
                         </div>
                         <p className="text-xs font-mono text-green-400 mt-1">
-                          {formatHashForDisplay(verificationResult.record.attendance_hash!)}
+                          {formatHashForDisplay(displayHash)}
                         </p>
                       </div>
                     </div>

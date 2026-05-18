@@ -46,6 +46,7 @@ const RLS_SQL = [
   // --- Enable RLS ------------------------------------------------------
   `ALTER TABLE public.mustersheets ENABLE ROW LEVEL SECURITY;`,
   `ALTER TABLE public.musterentries ENABLE ROW LEVEL SECURITY;`,
+  `DROP POLICY IF EXISTS "Public can view entries for active sheets" ON public.musterentries;`,
 
   // --- mustersheets policies ------------------------------------------
   `CREATE POLICY IF NOT EXISTS "Public can view active muster sheets"
@@ -129,19 +130,7 @@ const RLS_SQL = [
          WHERE mustersheets.id = musterentries.sheet_id
            AND mustersheets.creator_id = auth.uid()
        )
-     );`,
-
-  `CREATE POLICY IF NOT EXISTS "Public can view entries for active sheets"
-     ON public.musterentries
-     FOR SELECT
-     TO anon
-     USING (
-       EXISTS (
-         SELECT 1 FROM public.mustersheets
-         WHERE mustersheets.id = musterentries.sheet_id
-           AND mustersheets.is_active = true
-           AND (mustersheets.expires_at IS NULL OR mustersheets.expires_at > now())
-       )
+     );`
      );`
 ];
 
