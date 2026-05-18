@@ -44,23 +44,28 @@ export const AttendancePage = () => {
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>('');
   const isDevMode = import.meta.env.MODE === 'development'; // Check for development mode
 
-  // Server-side hash generation using Supabase Edge Function
-  const generateHashServerSide = async (entryData: any) => {
-    const { data, error } = await supabase.functions.invoke('generate-hash', {
-      body: { entryData }
-    })
-    
+  const submitAttendanceServerSide = async (sheetId: string, formData: Record<string, string>) => {
+    const { data, error } = await supabase.functions.invoke('submit-attendance', {
+      body: { sheetId, formData }
+    });
+
     if (error) {
-      console.error('[AttendancePage] Edge function error:', error)
-      throw new Error(`Hash generation failed: ${error.message}`)
+      console.error('[AttendancePage] submit-attendance function error:', error);
+      throw new Error(error.message || 'Attendance submission failed');
     }
-    
-    if (!data.success) {
-      throw new Error(`Hash generation failed: ${data.error || 'Unknown error'}`)
+
+    if (!data?.success) {
+      throw new Error(data?.error || 'Attendance submission failed');
     }
-    
-    return data.hash
-  }
+
+    return data as {
+      success: true;
+      entryId: string;
+      attendanceHash: string;
+      sheetTitle: string;
+      timestamp: string;
+    };
+  };
 
   useEffect(() => {
     if (sheetId) {
@@ -173,112 +178,44 @@ export const AttendancePage = () => {
     };
 
     try {
-      const now = new Date();
-      const timeString = sheet.time_format === 'military' 
-        ? now.toLocaleTimeString('en-US', { hour12: false })
-        : now.toLocaleTimeString('en-US', { hour12: true });
-
       console.log('[AttendancePage] Submitting attendance record:', {
         sheetId: sheetId,
         formData: formData,
         sheetDetails: {
           isActive: sheet.is_active,
           expiresAt: sheet.expires_at,
-          currentTime: now.toISOString(),
+          currentTime: new Date().toISOString(),
         },
       });
+      const submission = await submitAttendanceServerSide(sheetId, formData);
+      setAttendanceHash(submission.attendanceHash);
 
-      const recordData = {
-        sheet_id: sheetId,
-        timestamp: now.toISOString(),
-        first_name: formData.first_name || '',
-        last_name: formData.last_name || '',
-        email: formData.email || null,
-        phone: formData.phone || null,
-        rank: formData.rank || null,
-        badge_number: formData.badge_number || null,
-        unit: formData.unit || null,
-        age: formData.age ? parseInt(formData.age) : null,
-      };
-
-      const { error, data: insertData } = await supabase
-        .from('musterentries')
-        .insert([recordData])
-        .select(); // Select to get the inserted data, useful for debugging
-
-      if (error) {
-        console.error('[AttendancePage] Supabase insert error:', error);
-        console.error('[AttendancePage] Full error object:', JSON.stringify(error, null, 2));
-
-        const friendly = parseDbError(error);
-        toast({
-          title: friendly.title,
-          description: friendly.message,
-          variant: "destructive",
-        });
-      } else {
-        console.log('[AttendancePage] Attendance submitted successfully:', insertData);
-        
-        // Generate attendance hash with actual database ID
-        if (insertData && insertData[0]) {
-          const entry = insertData[0];
-          
-          // Generate hash with the actual database record data using server-side function
-          const hash = await generateHashServerSide({
-            id: entry.id,
-            sheetId: entry.sheet_id,
-            firstName: entry.first_name,
-            lastName: entry.last_name,
-            timestamp: entry.timestamp,
-            createdAt: entry.created_at,
-            email: entry.email || undefined,
-            phone: entry.phone || undefined,
-            rank: entry.rank || undefined,
-            badgeNumber: entry.badge_number || undefined,
-            unit: entry.unit || undefined,
-            age: entry.age || undefined,
-          });
-          
-          // Store the hash in the database
-          const { error: updateError } = await supabase
-            .from('musterentries')
-            .update({ attendance_hash: hash })
-            .eq('id', entry.id);
-          
-          if (updateError) {
-            console.error('[AttendancePage] Error updating hash:', updateError);
+      try {
+        const qrDataUrl = await QRCode.toDataURL(submission.attendanceHash, {
+          width: 200,
+          margin: 2,
+          color: {
+            dark: '#10B981',
+            light: '#1F2937'
           }
-          
-          setAttendanceHash(hash);
-          
-          // Generate QR code for the receipt
-          try {
-            const qrDataUrl = await QRCode.toDataURL(hash, {
-              width: 200,
-              margin: 2,
-              color: {
-                dark: '#10B981', // Green color
-                light: '#1F2937' // Dark background
-              }
-            });
-            setQrCodeDataUrl(qrDataUrl);
-          } catch (err) {
-            console.error('Error generating QR code:', err);
-          }
-        }
-        
-        setSubmitted(true);
-        toast({
-          title: "Success!",
-          description: `Thank you ${formData.first_name}! Your attendance has been recorded.`,
         });
+        setQrCodeDataUrl(qrDataUrl);
+      } catch (err) {
+        console.error('Error generating QR code:', err);
       }
+
+      setSubmitted(true);
+      toast({
+        title: "Success!",
+        description: `Thank you ${formData.first_name}! Your attendance has been recorded.`,
+      });
     } catch (err: any) {
       console.error('[AttendancePage] Unexpected error in handleSubmit:', err);
+      const friendly = parseDbError(err);
       toast({
-        title: "Error",
+        title: friendly.title,
         description:
-          err?.message ??
+          friendly.message ??
           'An unexpected network or server error occurred. Please try again.',
         variant: "destructive",
       });
