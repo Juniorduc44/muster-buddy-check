@@ -36,6 +36,12 @@ export const AuthForm = () => {
       result = isSignUp 
         ? await signUp(email, password)
         : await signIn(email, password);
+
+      if (isSignUp && !result.error) {
+        setSuccess(
+          'Account created. Check your email to confirm your sign-in, or sign in now if email confirmations are disabled.'
+        );
+      }
     }
 
     if (result.error) {

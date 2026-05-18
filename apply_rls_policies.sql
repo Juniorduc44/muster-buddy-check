@@ -29,14 +29,16 @@ CREATE POLICY "Users can manage their own muster sheets"
   WITH CHECK (creator_id = auth.uid());
 
 -- POLICY 3: Allow anonymous attendees to submit entries via QR code
--- An INSERT is allowed only if the referenced sheet exists
+-- An INSERT is allowed only for active, non-expired sheets
 CREATE POLICY "Allow QR code sign-ins"
   ON public.musterentries
-  FOR INSERT TO anon
+  FOR INSERT TO anon, authenticated
   WITH CHECK (
     EXISTS (
       SELECT 1 FROM public.mustersheets
       WHERE id = sheet_id
+        AND is_active = true
+        AND (expires_at IS NULL OR expires_at > now())
     )
   );
 
@@ -60,17 +62,31 @@ CREATE POLICY "Attendees see only their entry"
     auth.uid() = user_id
   );
 
--- Optional: Add policies for UPDATE/DELETE on musterentries for creators if needed
--- CREATE POLICY "Creators can manage entries"
---   ON public.musterentries
---   FOR UPDATE, DELETE
---   USING (
---     EXISTS (
---       SELECT 1 FROM public.mustersheets
---       WHERE mustersheets.id = musterentries.sheet_id
---         AND mustersheets.creator_id = auth.uid()
---     )
---   );
+-- POLICY 6: Creators can update entries on sheets they own
+CREATE POLICY "Creators can update entries"
+  ON public.musterentries
+  FOR UPDATE
+  TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.mustersheets
+      WHERE mustersheets.id = musterentries.sheet_id
+        AND mustersheets.creator_id = auth.uid()
+    )
+  );
+
+-- POLICY 7: Creators can delete entries on sheets they own
+CREATE POLICY "Creators can delete entries"
+  ON public.musterentries
+  FOR DELETE
+  TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.mustersheets
+      WHERE mustersheets.id = musterentries.sheet_id
+        AND mustersheets.creator_id = auth.uid()
+    )
+  );
 
 -- Verification (optional - run these separately in SQL Editor if needed)
 -- SELECT policyname, permissive, roles, cmd
