@@ -29,3 +29,6 @@ dist-ssr
 !.env.example
 RELEASE_v*.md
 report_*
+
+# Local reference documents (never publish)
+documents/
