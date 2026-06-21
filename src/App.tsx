@@ -11,7 +11,6 @@ import { AttendancePage } from "./pages/AttendancePage";
 import { ResultsPage } from "./pages/ResultsPage";
 import { QRCodePage } from "./pages/QRCodePage";
 import { EditSheetPage } from "./pages/EditSheetPage";
-import { VerifyReceiptPage } from "./pages/VerifyReceiptPage";
 
 const queryClient = new QueryClient();
 
@@ -30,8 +29,9 @@ const App = () => (
             <Route path="/results/:sheetId" element={<ResultsPage />} />
             <Route path="/qr/:sheetId" element={<QRCodePage />} />
             <Route path="/edit/:sheetId" element={<EditSheetPage />} />
-            {/* Public verification page - no auth required */}
-            <Route path="/verify" element={<VerifyReceiptPage />} />
+            {/* Receipt verification is creator-only and lives on the owner's
+                Results page (/results/:sheetId). No public verify route — a
+                public one would expose attendee data and is intentionally removed. */}
             {/* Catch-all 404 route */}
             <Route path="*" element={<NotFound />} />
           </Routes>

@@ -5,25 +5,31 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import { Input } from '@/components/ui/input';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
 } from '@/components/ui/table';
-import { 
-  Users, 
-  Download, 
-  Calendar, 
+import {
+  Users,
+  Download,
+  Calendar,
   AlertCircle,
   Copy,
   Eye,
-  EyeOff
+  EyeOff,
+  ShieldCheck,
+  Camera,
+  CheckCircle,
+  XCircle
 } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
-import { formatHashForDisplay } from '@/lib/hash-utils';
+import { formatHashForDisplay, isValidHashFormat } from '@/lib/hash-utils';
+import { QrScannerModal } from '@/components/QrScannerModal';
 
 // Corrected table types to match Supabase schema
 type MusterSheet = Tables<'mustersheets'>;
@@ -37,10 +43,50 @@ export const ResultsPage = () => {
   const [loading, setLoading] = useState(true);
   const [unauthorized, setUnauthorized] = useState(false);
   const [showHashes, setShowHashes] = useState(false);
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const [manualHash, setManualHash] = useState('');
+  const [verifyResult, setVerifyResult] = useState<
+    | { status: 'match'; record: AttendanceRecord }
+    | { status: 'nomatch' | 'invalid'; message: string }
+    | null
+  >(null);
 
   useEffect(() => {
     fetchSheetAndRecords();
   }, [sheetId, user]);
+
+  // Verify a scanned/entered receipt purely against this owner's already-loaded
+  // records. Ownership + sheet scope are guaranteed by the page itself (RLS
+  // Policy 5 loaded only this creator's entries), so a match here is proof the
+  // receipt belongs to an attendee of this sheet — no extra query, no exposure.
+  const verifyReceipt = (raw: string) => {
+    const embedded = raw.replace(/\s/g, '').match(/[a-fA-F0-9]{64}/);
+    const hash = embedded ? embedded[0] : raw.replace(/\s/g, '');
+
+    if (!isValidHashFormat(hash)) {
+      setVerifyResult({
+        status: 'invalid',
+        message: 'That code is not a valid receipt format.'
+      });
+      return;
+    }
+
+    const record = records.find(
+      r => r.attendance_hash?.toLowerCase() === hash.toLowerCase()
+    );
+
+    setVerifyResult(
+      record
+        ? { status: 'match', record }
+        : { status: 'nomatch', message: 'Not a valid receipt for this sheet.' }
+    );
+  };
+
+  const handleDecode = (text: string) => {
+    setScannerOpen(false);
+    setManualHash(text.trim());
+    verifyReceipt(text);
+  };
 
   const fetchSheetAndRecords = async () => {
     if (!sheetId || !user) {
@@ -204,6 +250,77 @@ export const ResultsPage = () => {
           </CardHeader>
         </Card>
 
+        <Card className="bg-gray-800 border-gray-700 mb-6">
+          <CardHeader>
+            <CardTitle className="text-white flex items-center">
+              <ShieldCheck className="h-5 w-5 mr-2 text-green-400" />
+              Verify a Receipt
+            </CardTitle>
+            <p className="text-sm text-gray-400">
+              Scan or paste an attendee's receipt to confirm it belongs to this sheet.
+              Only you, the creator, can verify your own sheets.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Button
+                type="button"
+                onClick={() => setScannerOpen(true)}
+                className="bg-green-600 hover:bg-green-700 shrink-0"
+              >
+                <Camera className="h-4 w-4 mr-2" />
+                Scan QR
+              </Button>
+              <Input
+                type="text"
+                placeholder="…or paste a receipt code"
+                value={manualHash}
+                onChange={(e) => setManualHash(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && manualHash.trim()) verifyReceipt(manualHash);
+                }}
+                className="flex-1 bg-gray-700 border-gray-600 text-white font-mono text-sm"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                disabled={!manualHash.trim()}
+                onClick={() => verifyReceipt(manualHash)}
+                className="border-gray-600 text-gray-300 hover:bg-gray-700 shrink-0"
+              >
+                Verify
+              </Button>
+            </div>
+
+            {verifyResult && (
+              <div className="mt-4">
+                {verifyResult.status === 'match' ? (
+                  <div className="rounded-lg border border-green-800 bg-green-900/20 p-4">
+                    <div className="flex items-center mb-2">
+                      <CheckCircle className="h-5 w-5 text-green-400 mr-2" />
+                      <h3 className="text-green-400 font-semibold">Valid receipt for this sheet</h3>
+                    </div>
+                    <p className="text-white font-medium">
+                      {verifyResult.record.first_name} {verifyResult.record.last_name}
+                    </p>
+                    <p className="text-sm text-gray-300">
+                      Checked in {formatDateTime(verifyResult.record.timestamp).date} at{' '}
+                      {formatDateTime(verifyResult.record.timestamp).time}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="rounded-lg border border-red-800 bg-red-900/20 p-4">
+                    <div className="flex items-center">
+                      <XCircle className="h-5 w-5 text-red-400 mr-2" />
+                      <span className="text-red-300">{verifyResult.message}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         <Card className="bg-gray-800 border-gray-700">
           <CardHeader>
             <div className="flex justify-between items-center">
@@ -327,6 +444,12 @@ export const ResultsPage = () => {
           </CardContent>
         </Card>
       </div>
+
+      <QrScannerModal
+        open={scannerOpen}
+        onOpenChange={setScannerOpen}
+        onDecode={handleDecode}
+      />
     </div>
   );
 };
