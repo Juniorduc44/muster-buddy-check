@@ -6,8 +6,8 @@ A lightweight, QR-based attendance app for events, formations, classes, and club
 
 **Live:** [mustersheets.netlify.app](https://mustersheets.netlify.app) · [juniorduc44.github.io/muster-buddy-check](https://juniorduc44.github.io/muster-buddy-check)
 
-<p align="left">
-  <img src="docs/screenshots/walkthrough.gif" alt="Muster Buddy Check walkthrough — onboarding, creating a sheet, and the QR attendance flow" width="220">
+<p align="center">
+  <img src="docs/screenshots/walkthrough.gif" alt="Muster Buddy Check walkthrough — onboarding, creating a sheet, and the QR attendance flow" width="620">
   <br>
   <em>From onboarding to QR check-in in a few taps.</em>
 </p>
