@@ -6,6 +6,12 @@ A lightweight, QR-based attendance app for events, formations, classes, and club
 
 **Live:** [mustersheets.netlify.app](https://mustersheets.netlify.app) · [juniorduc44.github.io/muster-buddy-check](https://juniorduc44.github.io/muster-buddy-check)
 
+<p align="center">
+  <img src="docs/screenshots/walkthrough.gif" alt="Muster Buddy Check walkthrough — onboarding, creating a sheet, and the QR attendance flow" width="720">
+  <br>
+  <em>From onboarding to QR check-in in a few taps.</em>
+</p>
+
 ## About this project
 
 Muster Buddy Check is **inspired by my time conducting musters in the U.S. Navy** — the everyday problem of accounting for people quickly and accurately, without paper. It's a personal project built to be genuinely useful for small events and a working demonstration of a modern, secure web stack.
@@ -23,6 +29,31 @@ It was built with **AI-accelerated development** — I directed the architecture
 - **Creator-only verification** — only the sheet owner can verify receipts and view attendee details, enforced by Supabase Row Level Security.
 - **Flexible auth** — email/password, magic link, GitHub OAuth, plus a guest mode for quick one-off sheets.
 - **12- or 24-hour ("military") time** formatting per sheet.
+
+## Screenshots
+
+<table>
+  <tr>
+    <td width="50%" align="center">
+      <img src="docs/screenshots/dashboard.png" alt="Organizer dashboard listing attendance sheets with stats and quick actions"><br>
+      <sub><b>Organizer dashboard</b> — all your sheets, live counts, and quick actions.</sub>
+    </td>
+    <td width="50%" align="center">
+      <img src="docs/screenshots/how-it-works.png" alt="Onboarding screen explaining create, share QR, sign in, track and export"><br>
+      <sub><b>How it works</b> — create, share a QR, sign in, track &amp; export.</sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" align="center">
+      <img src="docs/screenshots/signin.png" alt="Sign-in screen with email, magic link, Google and GitHub options"><br>
+      <sub><b>Flexible sign-in</b> — password, magic link, Google, or GitHub.</sub>
+    </td>
+    <td width="50%" align="center">
+      <img src="docs/screenshots/welcome.png" alt="Welcome onboarding screen for MusterSheets"><br>
+      <sub><b>Guided onboarding</b> — a friendly intro for first-time organizers.</sub>
+    </td>
+  </tr>
+</table>
 
 ## Routes
 

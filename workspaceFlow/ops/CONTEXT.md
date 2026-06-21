@@ -1,6 +1,6 @@
 # Ops Workspace
 
-_Last updated: 2026-06-20_
+_Last updated: 2026-06-21_
 
 Build, environment, deployment, CI, and branch hygiene.
 
@@ -20,6 +20,8 @@ Build, environment, deployment, CI, and branch hygiene.
 
 ## Branch hygiene — keep `main` clean (project rule)
 Workflow memory must not pollute `main`. The scaffolding — `CLAUDE.md` and the entire `workspaceFlow/` tree — stays on the **`claude`** branch only.
+
+**Asset rule:** `documents/` is gitignored ("never publish") — raw source material / screenshots, local-only, never committed or merged. README/marketing images that must render on GitHub live in `docs/screenshots/` (tracked) and ship to `main` together with `README.md`. Curate copies into `docs/screenshots/` with semantic names; keep the originals in `documents/`.
 When shipping a real app change to `main`:
 1. Make/commit the change on `claude`.
 2. Merge to main **selectively** — `git checkout main && git checkout claude -- <app paths>` (e.g. `src/ supabase/ public/ package.json`), then commit. Do **not** `git merge claude` wholesale (that would drag in `workspaceFlow/` and `CLAUDE.md`).
