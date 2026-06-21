@@ -1,215 +1,133 @@
-# Welcome to your Lovable project
+# Muster Buddy Check
 
-> **Project Name**: **Muster Buddy Check**  
-> **Current Version**: **v2.0.0**
+> **App name:** MusterSheets · **Repo:** muster-buddy-check · **Version:** 4.0.0
 
-Muster Buddy Check is a lightweight attendance-tracking web application designed for colleges, clubs and events.  Attendees simply scan a QR code or click a shareable link—no account needed.
+A lightweight, QR-based attendance app for events, formations, classes, and clubs. Organizers create a muster sheet; attendees scan a QR code or open a link and sign in — **no account required**. Each sign-in produces a tamper-evident receipt, and organizers see check-ins in real time.
 
----
+**Live:** [mustersheets.netlify.app](https://mustersheets.netlify.app) · [juniorduc44.github.io/muster-buddy-check](https://juniorduc44.github.io/muster-buddy-check)
 
-## Table of contents
-1. Prerequisites  
-2. Installation  
-3. Supabase setup  
-4. Environment variables  
-5. Running the RLS policy script  
-6. Development workflow  
-7. Local testing from other devices  
-8. Using the QR-code attendance flow  
-9. Deployment  
-10. Change log (v1.1.0 → v2.0.0)  
-11. Editing options (Lovable, IDE, Codespaces)
+<p align="center">
+  <img src="docs/screenshots/walkthrough.gif" alt="Muster Buddy Check walkthrough — onboarding, creating a sheet, and the QR attendance flow" width="620">
+  <br>
+  <em>From onboarding to QR check-in in a few taps.</em>
+</p>
 
----
+## About this project
 
-## 1. Prerequisites
-• Node.js (v18+) and npm or pnpm  
-• A Supabase project (free tier is fine)  
-• Git (optional but recommended)
+Muster Buddy Check is **inspired by my time conducting musters in the U.S. Navy** — the everyday problem of accounting for people quickly and accurately, without paper. It's a personal project built to be genuinely useful for small events and a working demonstration of a modern, secure web stack.
 
-## 2. Installation
+It was built with **AI-accelerated development** — I directed the architecture and security decisions (Row Level Security model, environment-variable separation, Supabase auth, the proof-of-attendance receipt design) and used AI tooling to move fast on implementation.
+
+> Note on scope: this is a free-tier hosted web app, not an accredited or DoD-authorized system. It's designed for everyday attendance tracking, not for environments that require formal security accreditation.
+
+## Features
+
+- **QR / link attendance** — share a QR code or `/attend/:sheetId` link; attendees sign in with no account.
+- **Configurable sign-in fields** — name (required), plus optional email, phone, rank, badge number, unit, age, per sheet.
+- **Proof-of-attendance receipt** — each entry gets a SHA-256 receipt (hash + QR) the attendee can save.
+- **Real-time results** — organizers view check-ins live and export to CSV.
+- **Creator-only verification** — only the sheet owner can verify receipts and view attendee details, enforced by Supabase Row Level Security.
+- **Flexible auth** — email/password, magic link, GitHub OAuth, plus a guest mode for quick one-off sheets.
+- **12- or 24-hour ("military") time** formatting per sheet.
+
+## Screenshots
+
+<table>
+  <tr>
+    <td width="50%" align="center">
+      <img src="docs/screenshots/welcome.png" alt="Welcome onboarding screen for MusterSheets"><br>
+      <sub><b>Guided onboarding</b> — a friendly intro for first-time organizers.</sub>
+    </td>
+    <td width="50%" align="center">
+      <img src="docs/screenshots/how-it-works.png" alt="Onboarding screen explaining create, share QR, sign in, track and export"><br>
+      <sub><b>How it works</b> — create, share a QR, sign in, track &amp; export.</sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" align="center">
+      <img src="docs/screenshots/signin.png" alt="Sign-in screen with email, magic link, Google and GitHub options"><br>
+      <sub><b>Flexible sign-in</b> — password, magic link, Google, or GitHub.</sub>
+    </td>
+    <td width="50%" align="center">
+      <img src="docs/screenshots/dashboard.png" alt="Organizer dashboard listing attendance sheets with stats and quick actions"><br>
+      <sub><b>Organizer dashboard</b> — all your sheets, live counts, and quick actions.</sub>
+    </td>
+  </tr>
+</table>
+
+## Routes
+
+| Route | Access | Purpose |
+|-------|--------|---------|
+| `/` | Public | Landing, dashboard, sheet creation |
+| `/attend/:sheetId` | **Public** | Attendee sign-in form |
+| `/qr/:sheetId` | Creator | QR code to share/print |
+| `/results/:sheetId` | Creator (owner only) | Live results, CSV export, receipt verification |
+| `/edit/:sheetId` | Creator (owner only) | Edit a sheet |
+
+## Tech stack
+
+Vite · React 18 + TypeScript · React Router · TanStack Query · Tailwind CSS + shadcn-ui (Radix) · Supabase (Postgres + Row Level Security + Edge Functions) · `qrcode`.
+
+## Getting started
+
+**Prerequisites:** Node.js 18+, npm, and a Supabase project (free tier is fine).
 
 ```bash
-git clone <YOUR_GIT_URL>
+git clone https://github.com/Juniorduc44/muster-buddy-check.git
 cd muster-buddy-check
-# install dependencies
-npm install            # or: pnpm install
+npm install
+cp .env.example .env      # then fill in your Supabase keys
+npm run dev               # dev server at http://localhost:8080
 ```
 
-## 3. Supabase setup
-1. Create a new Supabase project.  
-2. Open **SQL Editor → New Query** and run the schema located in `supabase/migrations` (all `*.sql` files).  
-3. Create a **service role** API key (Settings → API).  
-4. Copy the **anon/public** API key (also in Settings → API).  
-5. Continue with the Environment setup below.
+### Supabase setup
 
-## 4. Environment variables
-All variables live in a `.env` file (never commit secrets). A template is provided:
+1. Create a Supabase project.
+2. In **SQL Editor**, run the migrations in `supabase/migrations/` in date order.
+3. Apply Row Level Security policies — `npm run apply-rls` (uses your service-role key) **or** run the SQL manually.
+4. Copy your project URL and keys into `.env` (see below).
+
+### Environment variables
+
+| Variable | Used by | Notes |
+|----------|---------|-------|
+| `SUPABASE_URL` | CLI scripts | Project URL |
+| `SUPABASE_SERVICE_KEY` | CLI scripts only | **Secret** — never exposed to the browser |
+| `VITE_SUPABASE_ANON_KEY` | Browser | Public anon key (safe to ship) |
+
+Only `VITE_`-prefixed variables are exposed to the client by Vite.
+
+### Testing the QR flow on a phone (LAN)
 
 ```bash
-cp .env.example .env
-# then edit .env with your keys
+npm run dev -- --host          # expose the dev server on your network
 ```
 
-Required keys:
-* `SUPABASE_URL=https://<project-id>.supabase.co`
-* `SUPABASE_SERVICE_KEY=<SERVICE_ROLE_KEY>` (used **only** by the CLI script)
-* `VITE_SUPABASE_ANON_KEY=<PUBLIC_ANON_KEY>` (exposed to the browser)
+Open `http://<your-computer-ip>:8080` on a phone on the same Wi-Fi. Note: the device **camera** requires a secure context (HTTPS or `localhost`), so live camera features work on the deployed HTTPS site and on `localhost`, but not over a plain `http://<ip>` LAN address — there, file upload still works.
 
-## 5. Running the RLS policy script
-We ship an automated helper to apply Row Level Security (RLS) policies that make attendance pages public while still securing private data.
+## Scripts
 
-```bash
-npm run apply-rls
-# or: node scripts/apply-rls-policies.js
-```
+| Script | Does |
+|--------|------|
+| `npm run dev` | Start Vite dev server (port 8080) |
+| `npm run build` | Production build to `dist/` |
+| `npm run preview` | Serve the production build locally |
+| `npm run lint` | Run ESLint |
+| `npm run apply-rls` | Install Supabase RLS policies |
+| `npm run deploy` | Publish `dist/` to GitHub Pages (`gh-pages`) |
 
-The script connects with your `SUPABASE_SERVICE_KEY`, enables RLS, and installs all required policies.
+## Deployment
 
-## 6. Development workflow
+- **GitHub Pages** (primary): pushing to `main` triggers `.github/workflows/main.yml`, which builds and deploys `dist/`.
+- **Netlify**: connect the repo, build command `npm run build`, publish directory `dist/`; `public/_redirects` provides SPA routing.
 
-```bash
-# start local dev server at http://localhost:5173
-npm run dev
-```
+Either way, set `VITE_SUPABASE_ANON_KEY` (and any `VITE_` vars) in the host's environment, and ensure the RLS policies have been applied to your Supabase project.
 
-Open the site, create a muster sheet, then visit `/qr/<sheetId>` to view the auto-generated QR code.
+## Changelog
 
-## 7. Local testing from other devices
+See [`CHANGELOG.md`](./CHANGELOG.md) and the `RELEASE_*.md` notes for version history.
 
-Need to check the QR code or attendance link from a phone or tablet on your local network?  
-Follow these steps:
+## License
 
-1. **Expose the Vite dev server on your LAN**  
-   ```bash
-   # one-off
-   npm run dev -- --host
-   # or permanently add to package.json → "dev": "vite --host"
-   ```  
-   The `--host` flag tells Vite to listen on all interfaces (0.0.0.0) instead of `localhost`.
-
-2. **Find your computer’s local IP address**  
-   On macOS/Linux: `ifconfig | grep "inet "` → look for something like `192.168.x.x`.  
-   On Windows: `ipconfig` → “IPv4 Address”.
-
-3. **Open the site from another device**  
-   In a mobile browser type:  
-   ```
-   http://<YOUR_IP>:5173
-   ```  
-   (replace `<YOUR_IP>` with the IP from step 2, keep port **5173** unless you changed it).
-
-4. **Scan QR codes generated during development**  
-   The QR component will embed this IP in links, so phones on the same Wi-Fi can open the attendance page directly.
-
-5. **Firewall / VPN notes**  
-   • Ensure your OS firewall allows inbound connections on port 5173.  
-   • Some corporate or campus networks may block peer-to-peer traffic—you might need to use a tunnelling tool (e.g., [ngrok](https://ngrok.com/)).  
-
-Once deployed to a public host (Vercel, Netlify, Lovable, etc.) the QR code will automatically use the production URL, so this setup is only required for LAN testing.
-
-## 8. Using the QR-code attendance flow
-1. Log in (or continue as guest) and create a new muster sheet.  
-2. Go to **QR Code** from the sheet card or `/qr/<sheetId>`.  
-3. Download or print the QR code.  
-4. Attendees scan the code or use the link `/attend/<sheetId>`.  
-5. Submissions appear in real-time on the **Results** page.  
-
-The attendance page is completely public—no Supabase account required by the attendee.
-
-## 9. Deployment
-
-### Lovable ✨
-The easiest path: open [Lovable](https://lovable.dev/projects/066e7d8b-7097-4ef3-94ea-977294650014) → **Share** → **Publish**.  
-Lovable handles build & hosting automatically.
-
-### Vercel / Netlify / Render
-1. Create a new project and point it at this repo.  
-2. Add the same env vars (`VITE_…`) in the provider’s dashboard.  
-3. Build command: `npm run build`  
-4. Publish directory: `dist`
-
-Remember: self-hosted CI/CD will **not** run the RLS script automatically—you must execute `npm run apply-rls` once, or run the SQL manually.
-
-## 10. Change log
-
-### v2.0.0 — 2025-06-21
-* Public attendance pages powered by new **Row Level Security** policies  
-* **QR Code** page (`/qr/:sheetId`) with copy / download / test buttons  
-* NPM script **apply-rls** for one-click database policy installation  
-* Improved error handling & friendly messaging on the attendance page  
-* Added `.env.example` template and dotenv support  
-* Upgraded dependencies (React 18.3, Supabase JS v2.50, etc.)  
-* Project version bumped from **v1.1.0 → v2.0.0** in `package.json`  
-
-### v1.1.0 → v1.1.x
-Previous minor patches included small UI tweaks, guest-mode login, and performance improvements.
-
-## 10. How can I edit this code?
-<!-- section number bumped to 11 in ToC -->
-
-There are several ways of editing your application.
-
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/066e7d8b-7097-4ef3-94ea-977294650014) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
-
-**Edit a file directly in GitHub**
-
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
-
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/066e7d8b-7097-4ef3-94ea-977294650014) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+Personal project by [@jrducs](https://github.com/Juniorduc44). Not affiliated with or endorsed by the U.S. Navy or Department of Defense.
