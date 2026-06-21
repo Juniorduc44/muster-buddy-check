@@ -6,8 +6,8 @@ A lightweight, QR-based attendance app for events, formations, classes, and club
 
 **Live:** [mustersheets.netlify.app](https://mustersheets.netlify.app) · [juniorduc44.github.io/muster-buddy-check](https://juniorduc44.github.io/muster-buddy-check)
 
-<p align="center">
-  <img src="docs/screenshots/walkthrough.gif" alt="Muster Buddy Check walkthrough — onboarding, creating a sheet, and the QR attendance flow" width="720">
+<p align="left">
+  <img src="docs/screenshots/walkthrough.gif" alt="Muster Buddy Check walkthrough — onboarding, creating a sheet, and the QR attendance flow" width="220">
   <br>
   <em>From onboarding to QR check-in in a few taps.</em>
 </p>
@@ -35,8 +35,8 @@ It was built with **AI-accelerated development** — I directed the architecture
 <table>
   <tr>
     <td width="50%" align="center">
-      <img src="docs/screenshots/dashboard.png" alt="Organizer dashboard listing attendance sheets with stats and quick actions"><br>
-      <sub><b>Organizer dashboard</b> — all your sheets, live counts, and quick actions.</sub>
+      <img src="docs/screenshots/welcome.png" alt="Welcome onboarding screen for MusterSheets"><br>
+      <sub><b>Guided onboarding</b> — a friendly intro for first-time organizers.</sub>
     </td>
     <td width="50%" align="center">
       <img src="docs/screenshots/how-it-works.png" alt="Onboarding screen explaining create, share QR, sign in, track and export"><br>
@@ -49,8 +49,8 @@ It was built with **AI-accelerated development** — I directed the architecture
       <sub><b>Flexible sign-in</b> — password, magic link, Google, or GitHub.</sub>
     </td>
     <td width="50%" align="center">
-      <img src="docs/screenshots/welcome.png" alt="Welcome onboarding screen for MusterSheets"><br>
-      <sub><b>Guided onboarding</b> — a friendly intro for first-time organizers.</sub>
+      <img src="docs/screenshots/dashboard.png" alt="Organizer dashboard listing attendance sheets with stats and quick actions"><br>
+      <sub><b>Organizer dashboard</b> — all your sheets, live counts, and quick actions.</sub>
     </td>
   </tr>
 </table>
