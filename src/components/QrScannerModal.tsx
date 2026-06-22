@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { BrowserQRCodeReader } from '@zxing/browser';
+import QrScanner from 'qr-scanner';
 import {
   Dialog,
   DialogContent,
@@ -18,36 +18,14 @@ interface QrScannerModalProps {
 }
 
 /**
- * Minimal BarcodeDetector typing — the Web API isn't in TS's DOM lib yet.
- * It's a standard, sandboxed browser API backed by the platform's native
- * barcode engine (available in Chromium-based browsers, incl. Brave/Vanadium
- * on Android). Decoding runs entirely on-device; nothing is sent anywhere.
- */
-interface DetectedBarcode {
-  rawValue: string;
-}
-interface BarcodeDetectorLike {
-  detect: (source: CanvasImageSource | ImageBitmap | Blob) => Promise<DetectedBarcode[]>;
-}
-type BarcodeDetectorCtor = new (opts?: { formats?: string[] }) => BarcodeDetectorLike;
-
-const getNativeDetector = (): BarcodeDetectorLike | null => {
-  const Ctor = (window as unknown as { BarcodeDetector?: BarcodeDetectorCtor }).BarcodeDetector;
-  if (!Ctor) return null;
-  try {
-    return new Ctor({ formats: ['qr_code'] });
-  } catch {
-    return null;
-  }
-};
-
-/**
- * Camera/photo QR reader for the creator's Results page. Prefers the native
- * BarcodeDetector API (reliable + hardware-accelerated on mobile) and falls
- * back to @zxing/browser where it's unavailable. The camera stream is managed
- * here directly with an explicit play() so the preview never renders black,
- * and is fully torn down on close/unmount. The decoded text is handed back via
- * onDecode and matched locally against the owner's records — no network call.
+ * Camera/photo QR reader for the creator's Results page, built on
+ * nimiq/qr-scanner (MIT). It decodes entirely on-device in a WebWorker — no
+ * network, no third party, nothing leaves the browser. The decoded text is
+ * handed back via onDecode and matched locally against the owner's records.
+ *
+ * qr-scanner manages the camera stream, scan region and worker lifecycle for
+ * us, and its jsQR-based engine attempts both normal and inverted codes, which
+ * is far more robust than the previous hand-rolled BarcodeDetector loop.
  */
 export const QrScannerModal = ({ open, onOpenChange, onDecode }: QrScannerModalProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -60,78 +38,39 @@ export const QrScannerModal = ({ open, onOpenChange, onDecode }: QrScannerModalP
     if (!open) return;
 
     let cancelled = false;
-    let stream: MediaStream | null = null;
-    let rafId = 0;
-    let zxingControls: { stop: () => void } | null = null;
-
-    const stopAll = () => {
-      cancelAnimationFrame(rafId);
-      zxingControls?.stop();
-      zxingControls = null;
-      stream?.getTracks().forEach((t) => t.stop());
-      stream = null;
-    };
+    let scanner: QrScanner | null = null;
 
     const hit = (text: string) => {
       if (cancelled) return;
       cancelled = true;
-      stopAll();
       onDecode(text);
     };
 
     const start = async () => {
       setError(null);
       setScanning(false);
-      try {
-        // Manage the stream ourselves so the preview always paints.
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: { ideal: 'environment' } },
-          audio: false,
-        });
-        if (cancelled) {
-          stopAll();
-          return;
-        }
-        const video = videoRef.current;
-        if (!video) {
-          stopAll();
-          return;
-        }
-        video.srcObject = stream;
-        video.setAttribute('playsinline', 'true');
-        await video.play().catch(() => undefined);
-        setScanning(true);
+      const video = videoRef.current;
+      if (!video) return;
 
-        const detector = getNativeDetector();
-        if (detector) {
-          // Native path: poll frames via requestAnimationFrame.
-          const tick = async () => {
-            if (cancelled) return;
-            if (video.readyState >= 2) {
-              try {
-                const codes = await detector.detect(video);
-                if (codes.length > 0) {
-                  hit(codes[0].rawValue);
-                  return;
-                }
-              } catch {
-                /* transient decode error — keep polling */
-              }
-            }
-            rafId = requestAnimationFrame(tick);
-          };
-          rafId = requestAnimationFrame(tick);
-        } else {
-          // Fallback: let zxing decode from the element we're already playing.
-          const reader = new BrowserQRCodeReader();
-          zxingControls = await reader.decodeFromVideoElement(video, (result, _err, controls) => {
-            if (cancelled) {
-              controls.stop();
-              return;
-            }
-            if (result) hit(result.getText());
-          });
+      try {
+        scanner = new QrScanner(
+          video,
+          (result) => hit(result.data),
+          {
+            preferredCamera: 'environment',
+            highlightScanRegion: true,
+            highlightCodeOutline: true,
+            maxScansPerSecond: 5,
+            returnDetailedScanResult: true,
+          },
+        );
+        await scanner.start();
+        if (cancelled) {
+          scanner.destroy();
+          scanner = null;
+          return;
         }
+        setScanning(true);
       } catch (err) {
         console.error('[QrScannerModal] camera unavailable:', err);
         if (cancelled) return;
@@ -146,7 +85,8 @@ export const QrScannerModal = ({ open, onOpenChange, onDecode }: QrScannerModalP
 
     return () => {
       cancelled = true;
-      stopAll();
+      scanner?.destroy();
+      scanner = null;
       setScanning(false);
       setError(null);
     };
@@ -161,31 +101,13 @@ export const QrScannerModal = ({ open, onOpenChange, onDecode }: QrScannerModalP
     setDecoding(true);
 
     try {
-      // Native path first — handles large phone photos and EXIF rotation well.
-      const detector = getNativeDetector();
-      if (detector) {
-        const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
-        try {
-          const codes = await detector.detect(bitmap);
-          if (codes.length > 0) {
-            onDecode(codes[0].rawValue);
-            return;
-          }
-        } finally {
-          bitmap.close();
-        }
-      }
-
-      // Fallback: zxing on the raw image.
-      const url = URL.createObjectURL(file);
-      try {
-        const reader = new BrowserQRCodeReader();
-        const result = await reader.decodeFromImageUrl(url);
-        onDecode(result.getText());
-        return;
-      } finally {
-        URL.revokeObjectURL(url);
-      }
+      const result = await QrScanner.scanImage(file, {
+        returnDetailedScanResult: true,
+        // Try the full image too, not just the centre region — phone photos
+        // often have the QR off-centre or surrounded by the receipt card.
+        alsoTryWithoutScanRegion: true,
+      });
+      onDecode(result.data);
     } catch (err) {
       console.error('[QrScannerModal] no QR in image:', err);
       setError(
@@ -216,15 +138,11 @@ export const QrScannerModal = ({ open, onOpenChange, onDecode }: QrScannerModalP
               className="h-full w-full object-cover"
               muted
               playsInline
-              autoPlay
             />
             {!scanning && !error && (
               <div className="absolute inset-0 flex items-center justify-center text-sm text-gray-400">
                 Starting camera…
               </div>
-            )}
-            {scanning && (
-              <div className="pointer-events-none absolute inset-6 rounded-lg border-2 border-green-400/70" />
             )}
           </div>
 
