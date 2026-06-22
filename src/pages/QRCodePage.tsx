@@ -8,6 +8,7 @@ import { QrCode, Download, Copy, ExternalLink } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import type { Tables } from '@/integrations/supabase/types';
+import QRCode from 'qrcode';
 
 type MusterSheet = Pick<Tables<'mustersheets'>, 'id' | 'title' | 'description' | 'creator_id'>;
 
@@ -101,10 +102,30 @@ export const QRCodePage = () => {
     setLoading(false);
   };
 
-  const generateQRCode = () => {
-    // Using QR Server API for QR code generation
-    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(attendanceUrl)}`;
-    setQrCodeUrl(qrUrl);
+  const generateQRCode = async () => {
+    // Generate the QR locally with the bundled `qrcode` package — no third
+    // party. (Previously this POSTed the attendance URL to api.qrserver.com,
+    // which both leaked the URL off-device and broke offline.) Standard
+    // dark-on-light, with margin + error correction for reliable scanning.
+    try {
+      const dataUrl = await QRCode.toDataURL(attendanceUrl, {
+        width: 320,
+        margin: 4,
+        errorCorrectionLevel: 'M',
+        color: {
+          dark: '#000000',
+          light: '#FFFFFF'
+        }
+      });
+      setQrCodeUrl(dataUrl);
+    } catch (err) {
+      console.error('[QRCodePage] Failed to generate QR code:', err);
+      toast({
+        title: 'QR generation failed',
+        description: 'Could not generate the QR code. Please reload the page.',
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleCopyLink = async () => {

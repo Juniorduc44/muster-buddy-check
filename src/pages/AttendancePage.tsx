@@ -265,12 +265,18 @@ export const AttendancePage = () => {
 
           // Generate QR code for the receipt
           try {
+            // Standard dark-on-light QR. QR decoders (the phone's native
+            // BarcodeDetector and zxing) assume dark modules on a light
+            // background; an inverted/low-contrast code (e.g. light modules on
+            // a dark background) fails to scan. Black-on-white with margin +
+            // error correction is the most universally decodable combination.
             const qrDataUrl = await QRCode.toDataURL(hash, {
-              width: 200,
-              margin: 2,
+              width: 320,
+              margin: 4,
+              errorCorrectionLevel: 'M',
               color: {
-                dark: '#10B981', // Green color
-                light: '#1F2937' // Dark background
+                dark: '#000000',
+                light: '#FFFFFF'
               }
             });
             setQrCodeDataUrl(qrDataUrl);
