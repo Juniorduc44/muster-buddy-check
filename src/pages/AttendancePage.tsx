@@ -188,7 +188,47 @@ export const AttendancePage = () => {
         },
       });
 
+      // Generate the entry id + created_at client-side so the receipt hash can
+      // be computed up front and written in the SAME insert. This avoids two
+      // RLS pitfalls for anonymous attendees, who (by design) have no SELECT
+      // policy on musterentries:
+      //   1. `.insert().select()` fails the RLS read-back with 42501.
+      //   2. A separate `.update({attendance_hash}).eq('id', ...)` matches 0
+      //      rows, because Postgres applies SELECT policies to an UPDATE's
+      //      WHERE clause — so the hash was silently never stored.
+      // A single INSERT that already contains the hash needs only the INSERT
+      // policy, so it works for both public (anon) and private (creator) modes.
+      const entryId =
+        (typeof crypto !== 'undefined' && 'randomUUID' in crypto)
+          ? crypto.randomUUID()
+          : `${now.getTime()}-${Math.floor(Math.random() * 1e9).toString(16)}`;
+      const createdAt = now.toISOString();
+
+      // Compute the receipt hash first. If hashing fails, still record the
+      // attendance (just without a receipt) rather than blocking sign-in.
+      let hash = '';
+      try {
+        hash = await generateHashServerSide({
+          id: entryId,
+          sheetId: sheetId,
+          firstName: formData.first_name || '',
+          lastName: formData.last_name || '',
+          timestamp: now.toISOString(),
+          createdAt: createdAt,
+          email: formData.email || undefined,
+          phone: formData.phone || undefined,
+          rank: formData.rank || undefined,
+          badgeNumber: formData.badge_number || undefined,
+          unit: formData.unit || undefined,
+          age: formData.age ? parseInt(formData.age) : undefined,
+        });
+      } catch (hashErr) {
+        console.error('[AttendancePage] Hash generation failed; recording without receipt:', hashErr);
+      }
+
       const recordData = {
+        id: entryId,
+        created_at: createdAt,
         sheet_id: sheetId,
         timestamp: now.toISOString(),
         first_name: formData.first_name || '',
@@ -199,12 +239,13 @@ export const AttendancePage = () => {
         badge_number: formData.badge_number || null,
         unit: formData.unit || null,
         age: formData.age ? parseInt(formData.age) : null,
+        attendance_hash: hash || null,
       };
 
-      const { error, data: insertData } = await supabase
+      // No .select(): default return=minimal avoids the anon RLS read-back.
+      const { error } = await supabase
         .from('musterentries')
-        .insert([recordData])
-        .select(); // Select to get the inserted data, useful for debugging
+        .insert([recordData]);
 
       if (error) {
         console.error('[AttendancePage] Supabase insert error:', error);
@@ -217,40 +258,11 @@ export const AttendancePage = () => {
           variant: "destructive",
         });
       } else {
-        console.log('[AttendancePage] Attendance submitted successfully:', insertData);
-        
-        // Generate attendance hash with actual database ID
-        if (insertData && insertData[0]) {
-          const entry = insertData[0];
-          
-          // Generate hash with the actual database record data using server-side function
-          const hash = await generateHashServerSide({
-            id: entry.id,
-            sheetId: entry.sheet_id,
-            firstName: entry.first_name,
-            lastName: entry.last_name,
-            timestamp: entry.timestamp,
-            createdAt: entry.created_at,
-            email: entry.email || undefined,
-            phone: entry.phone || undefined,
-            rank: entry.rank || undefined,
-            badgeNumber: entry.badge_number || undefined,
-            unit: entry.unit || undefined,
-            age: entry.age || undefined,
-          });
-          
-          // Store the hash in the database
-          const { error: updateError } = await supabase
-            .from('musterentries')
-            .update({ attendance_hash: hash })
-            .eq('id', entry.id);
-          
-          if (updateError) {
-            console.error('[AttendancePage] Error updating hash:', updateError);
-          }
-          
+        console.log('[AttendancePage] Attendance submitted successfully:', entryId);
+
+        if (hash) {
           setAttendanceHash(hash);
-          
+
           // Generate QR code for the receipt
           try {
             const qrDataUrl = await QRCode.toDataURL(hash, {
