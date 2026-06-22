@@ -23,9 +23,11 @@ interface QrScannerModalProps {
  * network, no third party, nothing leaves the browser. The decoded text is
  * handed back via onDecode and matched locally against the owner's records.
  *
- * qr-scanner manages the camera stream, scan region and worker lifecycle for
- * us, and its jsQR-based engine attempts both normal and inverted codes, which
- * is far more robust than the previous hand-rolled BarcodeDetector loop.
+ * Live camera (getUserMedia) only works in a secure context: HTTPS or
+ * http://localhost. A phone hitting the dev server over a LAN IP
+ * (http://192.168.x.x:8080) is NOT secure, so the browser silently refuses the
+ * camera — hence we always surface a clear reason and the photo-upload path
+ * (which has no such restriction) stays available as a reliable fallback.
  */
 export const QrScannerModal = ({ open, onOpenChange, onDecode }: QrScannerModalProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -39,6 +41,7 @@ export const QrScannerModal = ({ open, onOpenChange, onDecode }: QrScannerModalP
 
     let cancelled = false;
     let scanner: QrScanner | null = null;
+    let startTimeout: ReturnType<typeof setTimeout> | undefined;
 
     const hit = (text: string) => {
       if (cancelled) return;
@@ -49,34 +52,71 @@ export const QrScannerModal = ({ open, onOpenChange, onDecode }: QrScannerModalP
     const start = async () => {
       setError(null);
       setScanning(false);
-      const video = videoRef.current;
-      if (!video) return;
+
+      // The <video> lives inside the Radix Dialog portal — wait a few frames
+      // for it to mount rather than silently bailing if the ref isn't set yet.
+      let video = videoRef.current;
+      for (let i = 0; !video && i < 30; i++) {
+        await new Promise((r) => requestAnimationFrame(r));
+        if (cancelled) return;
+        video = videoRef.current;
+      }
+      if (!video) {
+        setError('Could not initialise the camera preview. Use “Upload / take photo” instead.');
+        return;
+      }
+
+      // Insecure-origin / no-permission hangs never resolve or reject, so the
+      // UI would otherwise sit on "Starting camera…" forever. Surface a reason.
+      startTimeout = setTimeout(() => {
+        if (cancelled) return;
+        setError(
+          'The camera did not start. This usually means the page is not on HTTPS ' +
+            '(a http:// LAN address like 192.168.x.x blocks the camera), or permission ' +
+            'was not granted. You can still use “Upload / take photo”.'
+        );
+      }, 8000);
 
       try {
-        scanner = new QrScanner(
-          video,
-          (result) => hit(result.data),
-          {
-            preferredCamera: 'environment',
-            highlightScanRegion: true,
-            highlightCodeOutline: true,
-            maxScansPerSecond: 5,
-            returnDetailedScanResult: true,
+        if (!(await QrScanner.hasCamera())) {
+          clearTimeout(startTimeout);
+          if (cancelled) return;
+          setError('No camera detected on this device. Use “Upload / take photo” instead.');
+          return;
+        }
+
+        scanner = new QrScanner(video, (result) => hit(result.data), {
+          preferredCamera: 'environment',
+          highlightScanRegion: true,
+          highlightCodeOutline: true,
+          maxScansPerSecond: 5,
+          returnDetailedScanResult: true,
+          onDecodeError: () => {
+            /* per-frame "no QR in this frame" is normal — ignore */
           },
-        );
+        });
         await scanner.start();
+        clearTimeout(startTimeout);
         if (cancelled) {
           scanner.destroy();
           scanner = null;
           return;
         }
         setScanning(true);
+        console.log('[QrScannerModal] camera started');
       } catch (err) {
-        console.error('[QrScannerModal] camera unavailable:', err);
+        clearTimeout(startTimeout);
+        console.error('[QrScannerModal] camera failed to start:', err);
         if (cancelled) return;
         setScanning(false);
+        const name = (err as { name?: string })?.name;
         setError(
-          'Camera unavailable or permission denied. Use “Upload / take photo” instead. (Live camera needs HTTPS — localhost and the deployed site qualify.)'
+          name === 'NotAllowedError'
+            ? 'Camera permission was blocked. Allow camera access for this site, or use “Upload / take photo”.'
+            : name === 'NotFoundError'
+            ? 'No camera was found on this device. Use “Upload / take photo” instead.'
+            : 'Camera unavailable — this usually means the page is not served over HTTPS. ' +
+              'Use “Upload / take photo” instead.'
         );
       }
     };
@@ -85,6 +125,7 @@ export const QrScannerModal = ({ open, onOpenChange, onDecode }: QrScannerModalP
 
     return () => {
       cancelled = true;
+      clearTimeout(startTimeout);
       scanner?.destroy();
       scanner = null;
       setScanning(false);
@@ -138,6 +179,7 @@ export const QrScannerModal = ({ open, onOpenChange, onDecode }: QrScannerModalP
               className="h-full w-full object-cover"
               muted
               playsInline
+              autoPlay
             />
             {!scanning && !error && (
               <div className="absolute inset-0 flex items-center justify-center text-sm text-gray-400">
