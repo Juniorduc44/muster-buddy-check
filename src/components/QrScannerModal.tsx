@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { BrowserQRCodeReader, IScannerControls } from '@zxing/browser';
+import { BrowserQRCodeReader } from '@zxing/browser';
 import {
   Dialog,
   DialogContent,
@@ -18,87 +18,181 @@ interface QrScannerModalProps {
 }
 
 /**
- * Camera/photo QR reader for the creator's Results page. Decoding happens
- * entirely in the browser via @zxing/browser — the decoded text is handed back
- * through onDecode and matched locally against the owner's already-loaded
- * records. No data leaves the page; no network call is made here.
+ * Minimal BarcodeDetector typing — the Web API isn't in TS's DOM lib yet.
+ * It's a standard, sandboxed browser API backed by the platform's native
+ * barcode engine (available in Chromium-based browsers, incl. Brave/Vanadium
+ * on Android). Decoding runs entirely on-device; nothing is sent anywhere.
+ */
+interface DetectedBarcode {
+  rawValue: string;
+}
+interface BarcodeDetectorLike {
+  detect: (source: CanvasImageSource | ImageBitmap | Blob) => Promise<DetectedBarcode[]>;
+}
+type BarcodeDetectorCtor = new (opts?: { formats?: string[] }) => BarcodeDetectorLike;
+
+const getNativeDetector = (): BarcodeDetectorLike | null => {
+  const Ctor = (window as unknown as { BarcodeDetector?: BarcodeDetectorCtor }).BarcodeDetector;
+  if (!Ctor) return null;
+  try {
+    return new Ctor({ formats: ['qr_code'] });
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * Camera/photo QR reader for the creator's Results page. Prefers the native
+ * BarcodeDetector API (reliable + hardware-accelerated on mobile) and falls
+ * back to @zxing/browser where it's unavailable. The camera stream is managed
+ * here directly with an explicit play() so the preview never renders black,
+ * and is fully torn down on close/unmount. The decoded text is handed back via
+ * onDecode and matched locally against the owner's records — no network call.
  */
 export const QrScannerModal = ({ open, onOpenChange, onDecode }: QrScannerModalProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const controlsRef = useRef<IScannerControls | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
+  const [decoding, setDecoding] = useState(false);
 
-  const stopStream = () => {
-    controlsRef.current?.stop();
-    controlsRef.current = null;
-  };
-
-  // Start the live camera stream while the dialog is open; tear it down on
-  // close/unmount so the camera light doesn't stay on.
   useEffect(() => {
-    if (!open) {
-      stopStream();
-      setError(null);
-      setScanning(false);
-      return;
-    }
+    if (!open) return;
 
     let cancelled = false;
-    setError(null);
-    setScanning(true);
+    let stream: MediaStream | null = null;
+    let rafId = 0;
+    let zxingControls: { stop: () => void } | null = null;
 
-    const reader = new BrowserQRCodeReader();
-    reader
-      .decodeFromConstraints(
-        { video: { facingMode: 'environment' } },
-        videoRef.current!,
-        (result, _err, controls) => {
-          if (cancelled) {
-            controls.stop();
-            return;
-          }
-          controlsRef.current = controls;
-          if (result) {
-            controls.stop();
-            controlsRef.current = null;
-            onDecode(result.getText());
-          }
+    const stopAll = () => {
+      cancelAnimationFrame(rafId);
+      zxingControls?.stop();
+      zxingControls = null;
+      stream?.getTracks().forEach((t) => t.stop());
+      stream = null;
+    };
+
+    const hit = (text: string) => {
+      if (cancelled) return;
+      cancelled = true;
+      stopAll();
+      onDecode(text);
+    };
+
+    const start = async () => {
+      setError(null);
+      setScanning(false);
+      try {
+        // Manage the stream ourselves so the preview always paints.
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: 'environment' } },
+          audio: false,
+        });
+        if (cancelled) {
+          stopAll();
+          return;
         }
-      )
-      .catch((err) => {
+        const video = videoRef.current;
+        if (!video) {
+          stopAll();
+          return;
+        }
+        video.srcObject = stream;
+        video.setAttribute('playsinline', 'true');
+        await video.play().catch(() => undefined);
+        setScanning(true);
+
+        const detector = getNativeDetector();
+        if (detector) {
+          // Native path: poll frames via requestAnimationFrame.
+          const tick = async () => {
+            if (cancelled) return;
+            if (video.readyState >= 2) {
+              try {
+                const codes = await detector.detect(video);
+                if (codes.length > 0) {
+                  hit(codes[0].rawValue);
+                  return;
+                }
+              } catch {
+                /* transient decode error — keep polling */
+              }
+            }
+            rafId = requestAnimationFrame(tick);
+          };
+          rafId = requestAnimationFrame(tick);
+        } else {
+          // Fallback: let zxing decode from the element we're already playing.
+          const reader = new BrowserQRCodeReader();
+          zxingControls = await reader.decodeFromVideoElement(video, (result, _err, controls) => {
+            if (cancelled) {
+              controls.stop();
+              return;
+            }
+            if (result) hit(result.getText());
+          });
+        }
+      } catch (err) {
         console.error('[QrScannerModal] camera unavailable:', err);
         if (cancelled) return;
         setScanning(false);
         setError(
-          'Camera unavailable or permission denied. Use “Upload / take photo” instead. (Live camera needs HTTPS.)'
+          'Camera unavailable or permission denied. Use “Upload / take photo” instead. (Live camera needs HTTPS — localhost and the deployed site qualify.)'
         );
-      });
+      }
+    };
+
+    start();
 
     return () => {
       cancelled = true;
-      stopStream();
+      stopAll();
+      setScanning(false);
+      setError(null);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    e.target.value = '';
     if (!file) return;
     setError(null);
+    setDecoding(true);
 
-    const url = URL.createObjectURL(file);
     try {
-      const reader = new BrowserQRCodeReader();
-      const result = await reader.decodeFromImageUrl(url);
-      onDecode(result.getText());
+      // Native path first — handles large phone photos and EXIF rotation well.
+      const detector = getNativeDetector();
+      if (detector) {
+        const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
+        try {
+          const codes = await detector.detect(bitmap);
+          if (codes.length > 0) {
+            onDecode(codes[0].rawValue);
+            return;
+          }
+        } finally {
+          bitmap.close();
+        }
+      }
+
+      // Fallback: zxing on the raw image.
+      const url = URL.createObjectURL(file);
+      try {
+        const reader = new BrowserQRCodeReader();
+        const result = await reader.decodeFromImageUrl(url);
+        onDecode(result.getText());
+        return;
+      } finally {
+        URL.revokeObjectURL(url);
+      }
     } catch (err) {
       console.error('[QrScannerModal] no QR in image:', err);
-      setError('No QR code found in that image. Try a clearer photo.');
+      setError(
+        'No QR code found in that image. Make sure the QR fills most of the frame and is in focus, then try again.'
+      );
     } finally {
-      URL.revokeObjectURL(url);
-      e.target.value = '';
+      setDecoding(false);
     }
   };
 
@@ -129,6 +223,9 @@ export const QrScannerModal = ({ open, onOpenChange, onDecode }: QrScannerModalP
                 Starting camera…
               </div>
             )}
+            {scanning && (
+              <div className="pointer-events-none absolute inset-6 rounded-lg border-2 border-green-400/70" />
+            )}
           </div>
 
           {error && (
@@ -142,18 +239,18 @@ export const QrScannerModal = ({ open, onOpenChange, onDecode }: QrScannerModalP
             ref={fileInputRef}
             type="file"
             accept="image/*"
-            capture="environment"
             className="hidden"
             onChange={handleFile}
           />
           <Button
             type="button"
             variant="outline"
+            disabled={decoding}
             onClick={() => fileInputRef.current?.click()}
             className="w-full border-gray-600 text-gray-300 hover:bg-gray-700"
           >
             <Upload className="h-4 w-4 mr-2" />
-            Upload / take photo
+            {decoding ? 'Reading image…' : 'Upload / take photo'}
           </Button>
         </div>
       </DialogContent>
