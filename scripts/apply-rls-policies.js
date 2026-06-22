@@ -47,6 +47,9 @@ const RLS_SQL = [
   `ALTER TABLE public.mustersheets ENABLE ROW LEVEL SECURITY;`,
   `ALTER TABLE public.musterentries ENABLE ROW LEVEL SECURITY;`,
 
+  // --- Public/private submission mode (see 20260622_add_is_public_toggle.sql)
+  `ALTER TABLE public.mustersheets ADD COLUMN IF NOT EXISTS is_public boolean NOT NULL DEFAULT true;`,
+
   // --- mustersheets policies ------------------------------------------
   `CREATE POLICY IF NOT EXISTS "Public can view active muster sheets"
      ON public.mustersheets
@@ -61,8 +64,14 @@ const RLS_SQL = [
      USING (creator_id = auth.uid())
      WITH CHECK (creator_id = auth.uid());`,
 
-  // --- musterentries policies -----------------------------------------
-  `CREATE POLICY IF NOT EXISTS "Allow QR code sign-ins"
+  // --- musterentries INSERT policies (public/private mode aware) ------
+  // Retire the old single-policy insert; replace with two mode-aware policies.
+  `DROP POLICY IF EXISTS "Allow QR code sign-ins" ON public.musterentries;`,
+  `DROP POLICY IF EXISTS "Public sign-ins on public sheets" ON public.musterentries;`,
+  `DROP POLICY IF EXISTS "Owners can add entries to their sheets" ON public.musterentries;`,
+
+  // PUBLIC sheets: anyone (anon or authenticated) may sign in.
+  `CREATE POLICY "Public sign-ins on public sheets"
      ON public.musterentries
      FOR INSERT
      TO anon, authenticated
@@ -70,6 +79,23 @@ const RLS_SQL = [
        EXISTS (
          SELECT 1 FROM public.mustersheets
          WHERE id = sheet_id
+           AND is_public = true
+           AND is_active = true
+           AND (expires_at IS NULL OR expires_at > now())
+       )
+     );`,
+
+  // ANY sheet: the creator may always add entries to their own active sheet
+  // (enables private "desk" sign-in).
+  `CREATE POLICY "Owners can add entries to their sheets"
+     ON public.musterentries
+     FOR INSERT
+     TO authenticated
+     WITH CHECK (
+       EXISTS (
+         SELECT 1 FROM public.mustersheets
+         WHERE id = sheet_id
+           AND creator_id = auth.uid()
            AND is_active = true
            AND (expires_at IS NULL OR expires_at > now())
        )

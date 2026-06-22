@@ -21,6 +21,7 @@ export const CreateSheetModal = ({ open, onClose, onSheetCreated }: CreateSheetM
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [timeFormat, setTimeFormat] = useState<'standard' | 'military'>('standard');
+  const [isPublic, setIsPublic] = useState(true);
   const [selectedFields, setSelectedFields] = useState<string[]>(['first_name', 'last_name']);
   const [expiresAt, setExpiresAt] = useState('');
   const [loading, setLoading] = useState(false);
@@ -67,6 +68,7 @@ export const CreateSheetModal = ({ open, onClose, onSheetCreated }: CreateSheetM
         time_format: timeFormat,
         expires_at: expiresAt ? new Date(expiresAt).toISOString() : null,
         is_active: true,
+        is_public: isPublic,
       };
 
       const { error } = await supabase
@@ -82,6 +84,7 @@ export const CreateSheetModal = ({ open, onClose, onSheetCreated }: CreateSheetM
         setDescription('');
         setSelectedFields(['first_name', 'last_name']);
         setTimeFormat('standard');
+        setIsPublic(true);
         setExpiresAt('');
         setSelectedTemplate(null);
       }
@@ -178,6 +181,24 @@ export const CreateSheetModal = ({ open, onClose, onSheetCreated }: CreateSheetM
                   className="bg-gray-700 border-gray-600 text-white"
                   rows={3}
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="submissionMode" className="text-white">Submission Mode</Label>
+                <select
+                  id="submissionMode"
+                  value={isPublic ? 'public' : 'private'}
+                  onChange={(e) => setIsPublic(e.target.value === 'public')}
+                  className="w-full h-10 px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white"
+                >
+                  <option value="public">Public — anyone with the link can sign in</option>
+                  <option value="private">Private — only you can sign attendees in</option>
+                </select>
+                <p className="text-sm text-gray-400">
+                  {isPublic
+                    ? 'Attendees open the link or scan the QR code and check themselves in (no account needed).'
+                    : 'The public form is hidden. You sign attendees in yourself (e.g. at a desk) and hand them their receipt to verify later.'}
+                </p>
               </div>
 
               <div className="space-y-2">

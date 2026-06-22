@@ -89,6 +89,7 @@ export type Database = {
           expires_at: string | null
           id: string
           is_active: boolean
+          is_public: boolean
           location: string | null
           required_fields: string[]
           time_format: string
@@ -104,6 +105,7 @@ export type Database = {
           expires_at?: string | null
           id?: string
           is_active?: boolean
+          is_public?: boolean
           location?: string | null
           required_fields?: string[]
           time_format?: string
@@ -119,6 +121,7 @@ export type Database = {
           expires_at?: string | null
           id?: string
           is_active?: boolean
+          is_public?: boolean
           location?: string | null
           required_fields?: string[]
           time_format?: string

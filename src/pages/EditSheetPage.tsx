@@ -36,6 +36,7 @@ export const EditSheetPage = () => {
   const [eventDate, setEventDate] = useState('');
   const [eventType, setEventType] = useState('');
   const [isActive, setIsActive] = useState(true);
+  const [isPublic, setIsPublic] = useState(true);
 
   useEffect(() => {
     if (sheetId && user) {
@@ -79,6 +80,7 @@ export const EditSheetPage = () => {
       setEventDate(data.event_date || '');
       setEventType(data.event_type || '');
       setIsActive(data.is_active);
+      setIsPublic(data.is_public);
 
     } catch (error) {
       console.error('Unexpected error fetching sheet:', error);
@@ -113,6 +115,7 @@ export const EditSheetPage = () => {
         required_fields: selectedFields,
         expires_at: expiresAt ? new Date(expiresAt).toISOString() : null,
         is_active: isActive,
+        is_public: isPublic,
         location: location || null,
         event_date: eventDate || null,
         event_type: eventType || null,
@@ -315,6 +318,24 @@ export const EditSheetPage = () => {
                 </div>
                 <p className="text-sm text-gray-400">
                   Click to toggle fields. First and Last Name are always required.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="submissionMode" className="text-white">Submission Mode</Label>
+                <select
+                  id="submissionMode"
+                  value={isPublic ? 'public' : 'private'}
+                  onChange={(e) => setIsPublic(e.target.value === 'public')}
+                  className="w-full h-10 px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white"
+                >
+                  <option value="public">Public — anyone with the link can sign in</option>
+                  <option value="private">Private — only you can sign attendees in</option>
+                </select>
+                <p className="text-sm text-gray-400">
+                  {isPublic
+                    ? 'Attendees open the link or scan the QR code and check themselves in (no account needed).'
+                    : 'The public form is hidden. You sign attendees in yourself (e.g. at a desk) and hand them their receipt to verify later.'}
                 </p>
               </div>
 

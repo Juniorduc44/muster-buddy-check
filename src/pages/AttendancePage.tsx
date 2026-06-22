@@ -396,6 +396,9 @@ export const AttendancePage = () => {
 
   const isExpired = sheet.expires_at && new Date(sheet.expires_at) < new Date();
   const isInactive = !sheet.is_active;
+  const isCreator = !!user && user.id === sheet.creator_id;
+  // Private sheets hide the public form: only the creator can sign attendees in.
+  const isPrivateLocked = !sheet.is_public && !isCreator;
 
   if (isExpired || isInactive) {
     return (
@@ -417,6 +420,24 @@ export const AttendancePage = () => {
                 <Bug className="h-4 w-4 mr-2" /> Debug RLS
               </Button>
             )}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (isPrivateLocked) {
+    return (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md bg-gray-800 border-gray-700">
+          <CardContent className="p-8 text-center">
+            <Users className="h-16 w-16 text-green-400 mx-auto mb-4" />
+            <h2 className="text-xl font-bold text-white mb-2">{sheet.title}</h2>
+            <h3 className="text-lg font-semibold text-white mb-2">Private sign-in</h3>
+            <p className="text-gray-400">
+              This is a private attendance sheet. Sign-ins are handled by the event
+              organizer — please see them to be checked in and to receive your receipt.
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -560,6 +581,12 @@ export const AttendancePage = () => {
           </CardHeader>
           
           <CardContent className="p-6">
+            {!sheet.is_public && isCreator && (
+              <div className="mb-4 rounded-lg border border-green-800 bg-green-900/20 p-3 text-sm text-green-300">
+                Private sheet — you're signing attendees in as the organizer. Hand each
+                attendee their receipt afterward so they can have it verified.
+              </div>
+            )}
             <form onSubmit={handleSubmit} className="space-y-4">
               {sheet.required_fields.map((field) => (
                 <div key={field} className="space-y-2">
