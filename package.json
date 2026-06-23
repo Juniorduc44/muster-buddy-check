@@ -13,7 +13,8 @@
     "predeploy": "VITE_GITHUB_PAGES=true npm run build",
     "deploy": "gh-pages -d dist",
     "start": "vite",
-    "apply-rls": "node scripts/apply-rls-policies.js"
+    "apply-rls": "node scripts/apply-rls-policies.js",
+    "test:qr-upload": "node scripts/verify-qr-upload.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",

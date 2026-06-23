@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MusterSheets scanner verification</title>
+    <style>
+      body { margin: 0 auto; max-width: 42rem; padding: 1rem; font: 16px system-ui; }
+      button, input { box-sizing: border-box; margin: .5rem 0; min-height: 3rem; width: 100%; }
+      video { background: #111; display: none; margin-top: 1rem; width: 100%; }
+      pre { overflow-wrap: anywhere; white-space: pre-wrap; }
+    </style>
+  </head>
+  <body>
+    <h1>Scanner verification</h1>
+    <p>First upload a saved receipt image. The camera test unlocks only after upload succeeds.</p>
+    <label for="receipt">Receipt image</label>
+    <input id="receipt" type="file" accept="image/*" />
+    <button id="camera-button" type="button" disabled>Use camera</button>
+    <video id="camera" aria-label="Live camera preview" muted playsinline autoplay></video>
+    <pre id="result" role="status" aria-live="polite">Waiting for a receipt image…</pre>
+    <script type="module">
+      import QrScanner from 'qr-scanner';
+
+      const fileInput = document.querySelector('#receipt');
+      const cameraButton = document.querySelector('#camera-button');
+      const video = document.querySelector('#camera');
+      const output = document.querySelector('#result');
+      let scanner;
+
+      const isReceipt = (text) => /^[a-fA-F0-9]{64}$/.test(text.replace(/\s/g, ''));
+
+      fileInput.addEventListener('change', async () => {
+        const file = fileInput.files?.[0];
+        if (!file) return;
+        output.textContent = 'Reading uploaded image…';
+
+        try {
+          const result = await QrScanner.scanImage(file, { returnDetailedScanResult: true });
+          output.textContent = `PASS 1/2: uploaded ${isReceipt(result.data) ? 'receipt' : 'generic'} QR decoded:\n${result.data}\n\nCamera test is now available.`;
+          cameraButton.disabled = false;
+          document.body.dataset.upload = 'passed';
+        } catch (error) {
+          output.textContent = `UPLOAD FAIL: ${error instanceof Error ? error.message : String(error)}`;
+          cameraButton.disabled = true;
+          document.body.dataset.upload = 'failed';
+        }
+      });
+
+      cameraButton.addEventListener('click', async () => {
+        cameraButton.disabled = true;
+        video.style.display = 'block';
+        output.textContent = 'Starting camera…';
+        scanner = new QrScanner(video, (result) => {
+          output.textContent = `PASS 2/2: camera decoded a ${isReceipt(result.data) ? 'receipt' : 'generic'} QR:\n${result.data}`;
+          document.body.dataset.camera = 'passed';
+          scanner.destroy();
+        }, { preferredCamera: 'environment', returnDetailedScanResult: true });
+
+        try {
+          await scanner.start();
+          output.textContent = 'Camera started. Point it at a MusterSheets receipt QR.';
+          document.body.dataset.camera = 'started';
+        } catch (error) {
+          output.textContent = `CAMERA FAIL: ${error instanceof Error ? error.message : String(error)}`;
+          document.body.dataset.camera = 'failed';
+          cameraButton.disabled = false;
+        }
+      });
+    </script>
+  </body>
+</html>

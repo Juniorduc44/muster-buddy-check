@@ -59,14 +59,16 @@ export const ResultsPage = () => {
   // records. Ownership + sheet scope are guaranteed by the page itself (RLS
   // Policy 5 loaded only this creator's entries), so a match here is proof the
   // receipt belongs to an attendee of this sheet — no extra query, no exposure.
-  const verifyReceipt = (raw: string) => {
+  const verifyReceipt = (raw: string, decodedFromQr = false) => {
     const embedded = raw.replace(/\s/g, '').match(/[a-fA-F0-9]{64}/);
     const hash = embedded ? embedded[0] : raw.replace(/\s/g, '');
 
     if (!isValidHashFormat(hash)) {
       setVerifyResult({
         status: 'invalid',
-        message: 'That code is not a valid receipt format.'
+        message: decodedFromQr
+          ? 'QR decoded successfully, but it is not a MusterSheets receipt code.'
+          : 'That code is not a valid receipt format.'
       });
       return;
     }
@@ -78,14 +80,17 @@ export const ResultsPage = () => {
     setVerifyResult(
       record
         ? { status: 'match', record }
-        : { status: 'nomatch', message: 'Not a valid receipt for this sheet.' }
+        : {
+            status: 'nomatch',
+            message: 'Receipt decoded successfully, but it does not match an attendance record for this sheet.'
+          }
     );
   };
 
   const handleDecode = (text: string) => {
     setScannerOpen(false);
     setManualHash(text.trim());
-    verifyReceipt(text);
+    verifyReceipt(text, true);
   };
 
   const fetchSheetAndRecords = async () => {

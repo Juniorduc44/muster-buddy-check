@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>QR upload verification</title>
+  </head>
+  <body>
+    <pre id="result">Running…</pre>
+    <script type="module">
+      import QRCode from 'qrcode';
+      import QrScanner from 'qr-scanner';
+
+      const receipt = '0123456789abcdef'.repeat(4);
+      const denseQr = `https://example.com/verify?receipt=${receipt}&sheet=${'abcdef0123456789'.repeat(2)}`;
+      const output = document.querySelector('#result');
+
+      try {
+        const qrUrl = await QRCode.toDataURL(receipt, {
+          width: 320,
+          margin: 4,
+          errorCorrectionLevel: 'M',
+          color: { dark: '#000000', light: '#ffffff' },
+        });
+        const qrBlob = await (await fetch(qrUrl)).blob();
+        const receiptFile = new File([qrBlob], 'receipt.png', { type: 'image/png' });
+        const receiptResult = await QrScanner.scanImage(receiptFile, {
+          returnDetailedScanResult: true,
+        });
+
+        const qrImage = await createImageBitmap(qrBlob);
+        const canvas = document.createElement('canvas');
+        canvas.width = 1200;
+        canvas.height = 900;
+        const context = canvas.getContext('2d');
+        context.fillStyle = '#ffffff';
+        context.fillRect(0, 0, canvas.width, canvas.height);
+        context.drawImage(qrImage, 420, 270, 360, 360);
+        const documentBlob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+        const documentFile = new File([documentBlob], 'document-with-receipt.png', {
+          type: 'image/png',
+        });
+        const documentResult = await QrScanner.scanImage(documentFile, {
+          returnDetailedScanResult: true,
+        });
+
+        const smallCanvas = document.createElement('canvas');
+        smallCanvas.width = 169;
+        smallCanvas.height = 179;
+        const smallContext = smallCanvas.getContext('2d');
+        smallContext.fillStyle = '#ffffff';
+        smallContext.fillRect(0, 0, smallCanvas.width, smallCanvas.height);
+        smallContext.drawImage(qrImage, 10, 15, 149, 149);
+        const smallBlob = await new Promise((resolve) => smallCanvas.toBlob(resolve, 'image/png'));
+        const smallFile = new File([smallBlob], 'small-qr.png', { type: 'image/png' });
+        const smallResult = await QrScanner.scanImage(smallFile, {
+          returnDetailedScanResult: true,
+        });
+
+        const lowMarginUrl = await QRCode.toDataURL(receipt, {
+          width: 169,
+          margin: 2,
+          errorCorrectionLevel: 'M',
+          color: { dark: '#000000', light: '#ffffff' },
+        });
+        const lowMarginFile = new File(
+          [await (await fetch(lowMarginUrl)).blob()],
+          'small-low-margin-qr.png',
+          { type: 'image/png' },
+        );
+        const lowMarginResult = await QrScanner.scanImage(lowMarginFile, {
+          returnDetailedScanResult: true,
+        });
+
+        const denseUrl = await QRCode.toDataURL(denseQr, {
+          width: 189,
+          margin: 2,
+          errorCorrectionLevel: 'M',
+          color: { dark: '#000000', light: '#ffffff' },
+        });
+        const denseFile = new File(
+          [await (await fetch(denseUrl)).blob()],
+          'dense-189px-qr.png',
+          { type: 'image/png' },
+        );
+        const denseResult = await QrScanner.scanImage(denseFile, {
+          returnDetailedScanResult: true,
+        });
+
+        if (
+          receiptResult.data !== receipt ||
+          documentResult.data !== receipt ||
+          smallResult.data !== receipt ||
+          lowMarginResult.data !== receipt ||
+          denseResult.data !== denseQr
+        ) {
+          throw new Error('Decoded receipt did not match the generated receipt.');
+        }
+        output.textContent = 'PASS: receipt, document, small, low-margin, and dense QR images decoded.';
+        document.body.dataset.status = 'passed';
+      } catch (error) {
+        output.textContent = `FAIL: ${error instanceof Error ? error.message : String(error)}`;
+        document.body.dataset.status = 'failed';
+      }
+    </script>
+  </body>
+</html>
